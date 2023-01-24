@@ -1,0 +1,42 @@
+<html>
+    <head>
+        <script>
+            const commandApi="http://127.0.0.1:8101/command?cmdTag=";
+            async function doCommand(elWithCommands){
+                const url=commandApi+encodeURIComponent(elWithCommands.outerHTML);
+                const response=await fetch(
+                    url,
+                    {
+                        method:"GET",
+                        headers:{'Accept':'application/json'}
+                    }
+                );
+                var target=elWithCommands.nextElementSibling;
+                while(target!=null){
+                    if(target.classList.contains('results')){
+                        var txt="";
+                        const json=await response.json();
+                        for(const [key,value] of Object.entries(json)) {
+                            txt+=`<div class="result_block"><div class="result_block_title">${key}</div><pre>${value.stdouterr}</pre></div>`
+                        }
+                        target.innerHTML=txt;
+                        break;
+                    }
+                    target=target.nextElementSibling;
+                }
+            }
+        </script>
+        <style>
+            .results {background-color:black;padding:6px;}
+            .results pre {font-family:terminal,'Courier New',Courier,monospace; color:lime;padding:0px 6px}
+            .result_block {background-color:rgba(255,255,255,0.2);margin:6px;}
+            .result_block_title {background-color:rgba(255,255,255,0.2);padding:6px;box-shadow:0px 10px 10px red}
+            .button {background-color:cornflowerblue; cursor:pointer; padding:2px 6px; display:inline-block}
+        </style>
+    </head>
+    <body>
+        <div class="button" onClick="doCommand(this)">Button 1<command id="0" cmd="echo hello world" /></div>
+        <div class="button" onClick="doCommand(this)">Button 2<command id="0" cmd="echo Directory listing" /><command id="1" cmd="dir c:\" /></div>
+        <div class="results"></div>
+    </body>
+    </html>
