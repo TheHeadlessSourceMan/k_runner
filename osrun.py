@@ -26,7 +26,6 @@ HIGH_PRIORITY=100
 HIGHEST_PRIORITY=100
 REALTIME_PRIORITY=101
 
-
 def _getWinowsPriorityCode(pri:int)->int:
     """
     weirdly the values for windows priority
@@ -86,15 +85,25 @@ def extendStringNotifies(extendThis:StringNotifyList,withThis:typing.Optional[St
             extendThis.extend(withThis)
             
 
-def commandlineSplit(cmdline:str)->typing.Tuple[str,typing.List[str]]:
+def commandlineSplit(cmdline:typing.Union[str,typing.Iterable[str]]
+    )->typing.Tuple[str,typing.List[str]]:
     """
     split a command line into a cmd,params[]
     (unquoting as necessary)
     """
-    inQuot=''
-    delimitNextQuote=False
     cmd=''
     params:typing.List[str]=[]
+    if not isinstance(cmdline,str):
+        first=True
+        for c in params:
+            if first:
+                cmd=c
+                first=False
+            else:
+                params.append(c)
+        return (cmd,params)
+    inQuot=''
+    delimitNextQuote=False
     building=[]
     for c in cmdline:
         if inQuot:
@@ -162,9 +171,11 @@ class OsRunResult:
         self.finished:bool=True
         
     def __eq__(self,v:typing.Any)->bool:
-        return self.returncode==int(v)
-    def __ne__(self,v:int)->bool:
-        return self.returncode!=v
+        if isinstance(v,(int,float)):
+            return self.returncode==int(v)
+        return False
+    def __ne__(self,v:typing.Any)->bool:
+        return (self==v)==False
     
     @property
     def value(self)->int:
@@ -204,7 +215,7 @@ class OsRunResult:
         if self.stdout is not None:
             ret['stdout']=self.stdout
         if self.stdout is not None:
-            ret['stderr']=self.stdout
+            ret['stderr']=self.stderr
         if self.stdout is not None:
             ret['stdouterr']=self.stdout
         return ret
@@ -776,6 +787,8 @@ class OsRun:
             if params is None:
                 cmd,useParams=commandlineSplit(cmd)
         elif cmdLineSplit:
+            cmd,useParams=commandlineSplit(cmd)
+        if not isinstance(cmd,str):
             cmd,useParams=commandlineSplit(cmd)
         if params is not None:
             useParams.extend(params)
