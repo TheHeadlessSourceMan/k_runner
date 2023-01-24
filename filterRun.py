@@ -3,7 +3,7 @@ Extension of osrun to filter the execution output
 """
 import typing
 import re
-from osrun import OsRun
+from k_runner.osrun import OsRun
 
 
 class FilterRun:
