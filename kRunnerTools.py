@@ -13,6 +13,7 @@ Finally,if nothing else seems to be working,it'll revert back to the
 old subprocess module.
 """
 import typing
+from collections.abc import Iterable
 import os
 import threading
 import subprocess
@@ -225,7 +226,7 @@ class Application:
         """
         if callbacks is None:
             callbacks=ApplicationCallbacks()
-        if isinstance(cmd,list):
+        if isinstance(cmd,Iterable) and not isinstance[cmd,str]:
             cmd=[cmd]
         if self.runInShell is not None:
             cmd.insert(0,self.runInShellCommandFlag)
@@ -461,7 +462,7 @@ if hasWindowsStuff:
 
             See http://docs.activestate.com/activepython/2.4/pywin32/win32process__CreateProcess_meth.html
             """
-            if isinstance(cmd,list):
+            if isinstance(cmd,Iterable) and not isinstance(cmd,str):
                 cmd=' '.join(cmd)
             if self.runInShell is not None:
                 cmd=self.runInShellCommandFlag+' '+cmd

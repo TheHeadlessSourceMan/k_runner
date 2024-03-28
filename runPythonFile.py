@@ -69,12 +69,15 @@ def runPythonFile(script:str,args:typing.Iterable[str]=None):
     try:
         sys.stderr=errIo
         sys.stdout=errStringBuffer
-        returncode=exec(compile(open(script, "rb").read(), script, 'exec'),_globals)
+        returncode=exec(
+            compile(open(script, "rb").read(), script, 'exec'),
+            _globals)
         #exec(compile(open(script,"rb").read(),script,'exec'),_globals)
     except Exception:
         exc_type,exc_value,exc_traceback=sys.exc_info()
         import traceback
-        errIo.write('\n'.join(traceback.format_exception(exc_type,exc_value,exc_traceback)))
+        errIo.write('\n'.join(traceback.format_exception(
+            exc_type,exc_value,exc_traceback)))
     if errIo.hasWritten:
         has_err=True
     sys.argv=oldargs

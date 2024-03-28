@@ -5,6 +5,7 @@ Or a tag with a bunch of those in it
 Will execute the command and return the results.
 """
 import typing
+from collections.abc import Iterable,Mapping
 from lxml import etree
 from k_runner import osrun
 from paths import URLCompatible,asURL,URL
@@ -121,12 +122,12 @@ def commandTag(cmdTag:typing.Union[URLCompatible,str,etree.Element],**kwargs)->t
         ret:typing.Any=replacements
         steps=s.split('.')
         for i,step in enumerate(steps):
-            if isinstance(ret,(str,tuple,list)):
+            if isinstance(ret,Iterable): # iterable, including strings!
                 try:
                     ret=ret[int(step)]
                 except Exception:
                     raise AttributeError('.'.join(steps[0:i]))
-            elif hasattr(ret,'__getitem__'):
+            elif hasattr(ret,Mapping):
                 try:
                     ret=ret[step]
                 except Exception:

@@ -11,8 +11,13 @@ class FilterRun:
     Run something and filter the results as they come in
     """
 
-    def __init__(self,cmd:str,params:typing.Optional[typing.Iterable[str]]=None,shell:bool=False,detatch:bool=False,
-        debug:bool=False,cmdLineSplit:typing.Optional[bool]=None):
+    def __init__(self,
+        cmd:str,
+        params:typing.Optional[typing.Iterable[str]]=None,
+        shell:bool=False,
+        detatch:bool=False,
+        debug:bool=False,
+        cmdLineSplit:typing.Optional[bool]=None):
         """
         :param cmdLineSplit: how and when to split cmd parameter
             if True will always attempt to split cmd into params
@@ -21,36 +26,53 @@ class FilterRun:
         """
         self.osrun=OsRun(cmd,params,shell,detatch,debug,cmdLineSplit)
         self.filterOut:typing.List[typing.Pattern]=[]
-        
-    def addFilter(self,filter:typing.Union[str,typing.Pattern])->None:
-        if isinstance(filter,str):
-            filter=re.compile(filter)
-        self.filterOut.append(filter)
 
-    def checkFilters(self,line:str,filters:typing.Optional[typing.List[typing.Pattern]]=None):
+    def addFilter(self,
+        flt:typing.Union[str,typing.Pattern]
+        )->None:
+        """
+        add another filter to the list of filters
+        """
+        if isinstance(flt,str):
+            flt=re.compile(flt)
+        self.filterOut.append(flt)
+
+    def checkFilters(self,
+        line:str,
+        filters:typing.Optional[typing.List[typing.Pattern]]=None
+        )->bool:
         """
         returns True if it matches any of the given filters
         """
         if filters is None:
             filters=self.filterOut
-        for filter in filters:
-            if filter.match(line) is not None:
+        for flt in filters:
+            if flt.match(line) is not None:
                 return True
         return False
 
     def runIter(self)->typing.Generator[str,None,None]:
         """
-        run the program and yeild only lines that 
+        run the program and yeild only lines that
         """
         for line in self.osrun:
             if not self.checkFilters(line,self.filterOut):
                 yield line
+
+    def __call__(self)->typing.Generator[str,None,None]:
+        """
+        run the program and yeild only lines that
+        """
+        return self.runIter()
 
     def __iter__(self)->typing.Iterator[str]:
         return self.runIter()
 
 
 def cmdline(args:typing.Iterable[str])->int:
+    """
+    Call this module with command line arguments array
+    """
     printhelp=False
     shell=False
     detatch=False
@@ -99,7 +121,8 @@ def cmdline(args:typing.Iterable[str])->int:
                 results=osr(maxWait=maxWait)
                 print(results)
     if dashMode:
-        osr=FilterRun(dashModeCmd,dashModeArgs,shell=shell,detatch=detatch,debug=False)
+        osr=FilterRun(
+            dashModeCmd,dashModeArgs,shell=shell,detatch=detatch,debug=False)
         if useIter:
             for line in osr:
                 print(line)
@@ -110,11 +133,13 @@ def cmdline(args:typing.Iterable[str])->int:
         print('Useage:')
         print('   filterRun.py [options] "[cmd params]" ...')
         print('Options:')
-        print('   --help .............. show this help')
-        print('   --shell ............. run with a shell environment')
-        print('   --wmaxWait=sec ...... how long to wait for the program')
-        print('   --detatch ........... run detatched from this console (closing console will not close program)')
-        print('   - ................... everything after this point is cmd+params (convenience to not have to quote everything)')
+        print('   --help .......... show this help')
+        print('   --shell ......... run with a shell environment')
+        print('   --wmaxWait=sec .. how long to wait for the program')
+        print('   --detatch ....... run detatched from this console')
+        print('                (closing console will not close program)')
+        print('   - ............... everything after this point is cmd+params')
+        print('                (convenience to not have to quote everything)')
         print('NOTE:')
         print('   files and options are evaluated IN ORDER')
         return -1
@@ -123,4 +148,4 @@ def cmdline(args:typing.Iterable[str])->int:
 
 if __name__=='__main__':
     import sys
-    sys.exit(cmdline(sys.argv[1:])) 
+    sys.exit(cmdline(sys.argv[1:]))

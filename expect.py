@@ -1,3 +1,7 @@
+"""
+This is designed to work with osrun such that it waits until a condition
+is matched, then passes on sobsequent messages
+"""
 import typing
 import re
 
@@ -13,6 +17,7 @@ class Expect:
         repeat:bool=True):
         """
         """
+        self.thenCall:typing.Callable[[str],None]=thenCall
         self.repeat=repeat
         self._triggered=False
         self._count=0
@@ -27,8 +32,11 @@ class Expect:
             if isinstance(untilThis,str):
                 untilThis=re.compile(untilThis)
         self.untilThis=untilThis
-        
+
     def addLine(self,s:str)->None:
+        """
+        Add another expected line
+        """
         if self._triggered:
             if self.untilThis is not None:
                 if self.untilThis.match(s) is not None:
@@ -36,9 +44,9 @@ class Expect:
             elif self._triggered:
                 self.thenCall(s)
         elif self.waitFor is not None:
-            if self._repeat==False and self._count>0:
+            if self.repeat is False and self._count>0:
                 pass
             elif self.waitFor.match(s) is not None:
-            self._triggered=True
-            self._count+=1
+                self._triggered=True
+                self._count+=1
     __call__=addLine

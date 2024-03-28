@@ -1,14 +1,17 @@
 #!/usr/bin/env
 # -*- coding: utf-8 -*-
 """
-When used along with pythonw, you can run a python program without a terminal.
+When used along with pythonw,
+you can run a python program without a terminal.
 
-Then, only if there is an error code, it brings up a window with the program output.
+Then, only if there is an error code,
+it brings up a window with the program output.
 """
 import typing
+from collections.abc import Iterable
 import os
 from tkinter import Tk,Frame,Text,Scrollbar
-from k_runner.runPythonFile import *
+from k_runner.runPythonFile import runPythonFile
 
 
 class ErrorWindow(Frame):
@@ -34,11 +37,15 @@ class ErrorWindow(Frame):
         self.grid_columnconfigure(0,weight=1)
         self.textControl=Text(self,wrap="none",bg="#dddddd")
         self.textControl.grid(row=0,column=0,sticky="nsew",padx=2,pady=2)
-        xScrollbar=Scrollbar(self,orient='horizontal',command=self.textControl.xview)
+        xScrollbar=Scrollbar(self,
+            orient='horizontal',command=self.textControl.xview)
         xScrollbar.grid(row=1,column=0,sticky="ew")
-        yScrollbar=Scrollbar(self,orient='vertical',command=self.textControl.yview)
+        yScrollbar=Scrollbar(self,
+            orient='vertical',command=self.textControl.yview)
         yScrollbar.grid(row=0,column=1,sticky="ns")
-        self.textControl.configure(xscrollcommand=xScrollbar.set,yscrollcommand=yScrollbar.set)
+        self.textControl.configure(
+            xscrollcommand=xScrollbar.set,
+            yscrollcommand=yScrollbar.set)
 
     def clearOutputText(self)->None:
         """
@@ -86,7 +93,7 @@ class ErrorWindow(Frame):
         self.mainloop()
         try:
             self.master.destroy()
-        except:
+        except Exception:
             pass
         return False
 
@@ -126,10 +133,13 @@ class PyErrRun:
             """
             output_log.append(txt)
         isPythonScript=False
-        if isinstance(cmd,list):
-            while cmd[0].rsplit(os.sep,1)[-1] in ['pyhton','pythonw','python.exe','pythonw.exe']:
+        if isinstance(cmd,Iterable) and not isinstance(cmd,str):
+            executables=('pyhton','pythonw','python.exe','pythonw.exe')
+            extensions=('py','pyc','pyw')
+            while cmd[0].rsplit(os.sep,1)[-1] in executables:
                 cmd=cmd[1:]
-            if not isPythonScript and cmd[0].rsplit('.',1)[-1] in ['py','pyc','pyw']:
+            if not isPythonScript \
+                and cmd[0].rsplit('.',1)[-1] in extensions:
                 isPythonScript=cmd[0]
                 cmd=cmd[1:]
             cmdStr=[]
@@ -145,21 +155,27 @@ class PyErrRun:
             cmdStr=cmd
         try:
             if not isPythonScript:
-                returncode=runPythonFile(cmdStr,onOutputCB=onOut,onErrorCB=onErr,shell=shell)
+                returncode=runPythonFile(
+                    cmdStr,onOutputCB=onOut,onErrorCB=onErr,shell=shell)
                 returncode=0 # TODO: returncode seems to not be working?
                 output=''.join(output_log)
-                # I was originally doing it this way, but pythonw barfs when you
-                # do stderr=subprocess.STDOUT, thus, I cannot get the combined
-                # console output without using k_runner
-                #p=subprocess.Popen(cmd,shell=shell,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+                # I was originally doing it this way, but pythonw barfs when
+                # doing stderr=subprocess.STDOUT, thus, I cannot get the
+                # combined console output without using k_runner
+                #p=subprocess.Popen(cmd,
+                #   shell=shell,
+                #   stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
                 #output,_=p.communicate()
                 #returncode=p.returncode
             else:
-                has_stderr,output,returncode=runPythonFile(isPythonScript,cmd)
+                has_stderr,output,returncode=\
+                    runPythonFile(isPythonScript,cmd)
         except Exception:
+            import sys
             exc_type,exc_value,exc_traceback=sys.exc_info()
             import traceback
-            exceptionStuff=traceback.format_exception(exc_type,exc_value,exc_traceback)
+            exceptionStuff=traceback.format_exception(
+                exc_type,exc_value,exc_traceback)
             output='\n'.join(exceptionStuff)
             returncode=-65535
         title='ERR: '+cmdStr
@@ -174,12 +190,13 @@ class PyErrRun:
     @staticmethod
     def getLocation()->str:
         """
-        return the file location of pyErrRun so you know how to call it externally
+        return the file location of pyErrRun
+        so you know how to call it externally
         """
         return os.path.abspath(__file__)
 
 
-def cmdline(args:typing.Iterable[str]):
+def cmdline(args:typing.Iterable[str]): # pylint: disable=function-redefined
     """
     Run the command line
 

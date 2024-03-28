@@ -3,11 +3,14 @@
 """
 This program captures a window as an image.  It can even be a "hidden" window!
 """
+import typing
 from ctypes import windll
 import win32con
 import win32gui
 import win32ui
 import win32process
+if typing.TYPE_CHECKING:
+    import PIL
 
 
 HWND=int
@@ -15,7 +18,8 @@ HWND=int
 
 class WindowScreenshot:
     """
-    This program captures a window as an image.  It can even be a "hidden" window!
+    This program captures a window as an image.
+    It can even be a "hidden" window!
 
     See:
         https://www.codeproject.com/articles/20651/capturing-minimized-window-a-kid-s-trick
@@ -31,27 +35,32 @@ class WindowScreenshot:
         """
         old=win32gui.SystemParametersInfo(win32con.SPI_GETANIMATION,None,None)
         if old!=status:
-            win32gui.SystemParametersInfo(win32con.SPI_SETANIMATION,status,win32con.SPIF_SENDCHANGE)
+            win32gui.SystemParametersInfo(
+                win32con.SPI_SETANIMATION,status,win32con.SPIF_SENDCHANGE)
         return old==1
 
-    def setTransparency(self,hWnd:HWND,transp:bool=True):
+    def setTransparency(self,hWnd:HWND,transp:bool=True)->int:
         """
-        NOTE: there are several settings involved in this, so returning a True/False
-            may contain assumptions that are not true!
+        NOTE: there are several settings involved in this, so returning a
+            True/False may contain assumptions that are not true!
 
         returns the original value
         """
         wlong=win32gui.GetWindowLong(hWnd,win32con.GWL_EXSTYLE)
         colorkey,alpha,flags=win32gui.GetLayeredWindowAttributes(hWnd)
-        old=(wlong|win32con.WS_EX_LAYERED)>0 and alpha==1 and (flags|win32con.WS_EX_LAYERED)>0
+        old=(wlong|win32con.WS_EX_LAYERED)>0 \
+            and alpha==1 \
+            and (flags|win32con.WS_EX_LAYERED)>0
         if old!=transp:
             if transp:
                 win32gui.SetWindowLong(
                     hWnd,win32con.GWL_EXSTYLE,wlong|win32con.WS_EX_LAYERED)
-                win32gui.SetLayeredWindowAttributes(hWnd,0,1,flags|win32con.LWA_ALPHA)
+                win32gui.SetLayeredWindowAttributes(hWnd,
+                    0,1,flags|win32con.LWA_ALPHA)
             else:
-                win32gui.SetWindowLong(
-                    hWnd,win32con.GWL_EXSTYLE,wlong&(0xfffffffffffffff|win32con.WS_EX_LAYERED))
+                win32gui.SetWindowLong(hWnd,
+                    win32con.GWL_EXSTYLE,
+                    wlong&(0xfffffffffffffff|win32con.WS_EX_LAYERED))
                 win32gui.SetLayeredWindowAttributes(
                     hWnd,0,0,flags&(0xfffffffffffffff&win32con.LWA_ALPHA))
         return old

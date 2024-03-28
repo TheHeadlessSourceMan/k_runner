@@ -2,6 +2,7 @@
 bit of an ease of use wrapper around subprocess.Popen()
 """
 import typing
+from collections.abc import Iterable
 import os
 import sys
 import subprocess
@@ -776,8 +777,8 @@ class OsRun:
             if None (default) will only attempt if params[] is None
         """
         useParams:typing.List[str]=[]
-        if cmd is not None and hasattr(cmd,'__iter__') and not isinstance(cmd,str):
-            if not isinstance(cmd,(list,tuple)):
+        if cmd is not None and isinstance(cmd,Iterable) and not isinstance(cmd,str):
+            if not isinstance(cmd,Iterable) and not isinstance(cmd,str):
                 cmd=list(cmd)
             # they mistakenly sent in all args in the cmd
             if len(cmd)>1:
@@ -1159,4 +1160,4 @@ def cmdline(args:typing.Iterable[str])->int:
 
 if __name__=='__main__':
     import sys
-    sys.exit(cmdline(sys.argv[1:]))        
+    sys.exit(cmdline(sys.argv[1:]))

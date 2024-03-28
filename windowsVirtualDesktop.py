@@ -1,10 +1,19 @@
 #!/usr/bin/env
 # -*- coding: utf-8 -*-
 """
-This program creates a detatched desktop that can be used as a canvas for remote rendering.
+This program creates a detatched desktop that can be used
+as a canvas for remote rendering.
 """
 import typing
-from win32gui import BringWindowToTop, CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetWindowDC, GetWindowRect, SelectObject
+from win32gui import (
+    BringWindowToTop,
+    CreateCompatibleBitmap,
+    CreateCompatibleDC,
+    DeleteDC,
+    DeleteObject,
+    GetWindowDC,
+    GetWindowRect,
+    SelectObject)
 
 
 class Desktop:
@@ -21,7 +30,6 @@ class Desktop:
         """
         get the window handle of this desktop
         """
-        pass
 
     def _create(self):
         """

@@ -14,6 +14,7 @@ class Runner:
     RUNNER_TYPE=None
 
     def __init__(self,name:str,commands:str,*args,**vaArgs):
+        _=args
         self.name=name
         self.commands=commands
         for k,v in vaArgs.items():
@@ -26,6 +27,7 @@ class RunSomething:
     """
 
     def __init__(self,*args,**vaArgs):
+        _=args
         for k,v in vaArgs.items():
             self.__dict__[k]=v
 
