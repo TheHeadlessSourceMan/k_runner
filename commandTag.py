@@ -12,20 +12,47 @@ from paths import URLCompatible,asURL,URL
 
 
 class CommandFailedException(Exception):
+    """
+    Exception for when executing a command fails
+    """
     def __init__(self,cmd:str,onWhat:str,info:typing.Any):
         self.cmd=cmd
         self.info=info
-        Exception.__init__(self,f'Command:\n--------\n   {cmd}\nFailed on:\n----------\n   {onWhat}\nInfo:\n-----\n   {info}')
+        msg=[
+            'Command:',
+            '--------',
+            f'   {cmd}',
+            'Failed on:',
+            '----------',
+            f'   {onWhat}'
+            'Info:',
+            '-----',
+            f'   {info}']
+        Exception.__init__(self,'\n'.join(msg))
 class CommandFailedOnReturncodeException(CommandFailedException):
+    """
+    Exception for when the return value of a shell command is nonzero
+    """
     def __init__(self,cmd:str,info:int):
         CommandFailedException.__init__(self,cmd,'Return Code',info)
 class CommandFailedOnStderrException(CommandFailedException):
+    """
+    Exception for when messages come out on the stderr stream
+    of a shell command
+    """
     def __init__(self,cmd:str,info:str):
         CommandFailedException.__init__(self,cmd,'Stderr',info)
 class CommandFailedOnMissingArgumentException(CommandFailedException):
+    """
+    Exception for when two few arguments are supplied
+    """
     def __init__(self,cmd:str,info:int):
         CommandFailedException.__init__(self,cmd,'Missing Argument',info)
-def commandTag(cmdTag:typing.Union[URLCompatible,str,etree.Element],**kwargs)->typing.Dict[str,osrun.OsRunResult]:
+
+def commandTag(
+    cmdTag:typing.Union[URLCompatible,str,etree.Element],
+    **kwargs
+    )->typing.Dict[str,osrun.OsRunResult]:
     """
     Given an xml tag of the form
         <command id="my_cmd" cmd="something" />
@@ -36,12 +63,14 @@ def commandTag(cmdTag:typing.Union[URLCompatible,str,etree.Element],**kwargs)->t
         commandTag('<command cmd="do_{foo}.sh" />',foo="splat")
     Will run the command "do_splat.sh"
 
-    Additional arguments can be anything tree-like (object heirarchy, dict tree, etc), eg:
+    Additional arguments can be anything tree-like
+        (object heirarchy, dict tree, etc), eg:
         commandTag('<command cmd="do_{jsondata.x}.sh" />',foo=json.loads('{"x","splat"}'))
     Will run the command "do_splat.sh"
 
-    You can have things in the additional arguments that are not used in any commands,
-    but you cannot have any commands that rely up arguments you don't have. (will raise an exception)
+    You can have things in the additional arguments that are not used in any
+    commands, but you cannot have any commands that rely up arguments you
+    don't have. (will raise an exception)
 
     The additional arguments will be expanded with the results of each call:
         commandTag('<div><command id="x_cmd" cmd="x.sh" /><command cmd="y.sh {x_cmd.stdout}" /></div>')
@@ -55,9 +84,11 @@ def commandTag(cmdTag:typing.Union[URLCompatible,str,etree.Element],**kwargs)->t
     The attributes: breakOnReturncode,breakOnStderr (both True by default)
         can be used to control when to bail out.
 
-    :cmdTag: can be an lxml element, an xml string, or a Url of an object to download
+    :cmdTag: can be an lxml element, an xml string, 
+        or a Url of an object to download
 
-    On simple example of using this is (note: doesn't handle fancy things like terminal controls, etc):
+    On simple example of using this is
+    (note: doesn't handle fancy things like terminal controls, etc):
         <head>
         <script>
             const commandApi="http://127.0.0.1:8101/command?cmdTag=";
@@ -165,10 +196,13 @@ def commandTag(cmdTag:typing.Union[URLCompatible,str,etree.Element],**kwargs)->t
             cmd:str=stringReplacement(el.attrib['cmd'])
             id:str=el.attrib.get('id','')
             result=osrun.run(cmd,shell=True)
-            if result.stderr and el.attrib.get('breakOnStderr','t')[0] in ('t','y','1'):
-                raise  CommandFailedOnStderrException(cmd,result.stderr)
-            if result.returncode!=0 and el.attrib.get('breakOnReturncode','t')[0] in ('t','y','1'):
-                raise  CommandFailedOnReturncodeException(cmd,result.returncode)
+            if result.stderr \
+                and el.attrib.get('breakOnStderr','t')[0] in ('t','y','1'):
+                raise CommandFailedOnStderrException(cmd,result.stderr)
+            if result.returncode!=0 \
+                and el.attrib.get('breakOnReturncode','t')[0] in ('t','y','1'):
+                raise CommandFailedOnReturncodeException(
+                    cmd,result.returncode)
             if id:
                 replacements[id]=result
                 results[id]=result
@@ -179,7 +213,8 @@ def runCommandServer(port:int=8101,**kwargs):
     """
     Starts up a command server on the given port
 
-    WARNING: this endpoint can be a HUGE security risk if outside parties gain access to it!
+    WARNING: this endpoint can be a HUGE security risk
+    if outside parties gain access to it!
 
     kwargs passed in will serve as the default args to all commands
     """
@@ -220,7 +255,8 @@ def runCommandServer(port:int=8101,**kwargs):
                     if len(kv)<2:
                         kv.append('')
                     params[URL.urldecode(kv[0])]=URL.urldecode(kv[1])
-                print('command('+(','.join([f'{k}="{v}"' for k,v in params.items()]))+')')
+                paramsStr=','.join([f'{k}="{v}"' for k,v in params.items()])
+                print(f'command({paramsStr})')
                 results={}
                 for k,v in commandTag(**params).items():
                     results[k]=v.jsonObj
@@ -232,16 +268,17 @@ def runCommandServer(port:int=8101,**kwargs):
                 self.send_header('Access-Control-Allow-Origin','*')
                 self.end_headers()
                 self.wfile.write(returnbytes)
-            except Exception as e:
+            except Exception:
                 import io
                 import traceback
-                errors = io.StringIO()
+                errors=io.StringIO()
                 traceback.print_exc(file=errors)
                 self.send_error(500,f'ERROR:\n{errors.getvalue()}')
 
     server_address=('127.0.0.1',int(port))
     server=HTTPServer(server_address,CommandHandler)
-    print(f'Starting command server on http://{server_address[0]}:{server_address[1]}/command?')
+    url=f'http://{server_address[0]}:{server_address[1]}/command?'
+    print(f'Starting command server on {url}')
     server.serve_forever(1)
 
 

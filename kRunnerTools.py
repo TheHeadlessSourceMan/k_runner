@@ -24,7 +24,7 @@ try:
     import signal
     import pyev
     hasPyEv=True
-except:
+except ImportError:
     hasPyEv=False
 
 try:
@@ -44,12 +44,20 @@ except ImportError:
 
 
 # -------------- Api
-def run(cmd:str,callbacks:ApplicationCallbacks=None,hideWindows:bool=False,priorityBoost:int=0,
-    wDogOutput=None,wDogLifetime=None,shell:bool=False):
+def run(
+    cmd:str,
+    callbacks:ApplicationCallbacks=None,
+    hideWindows:bool=False,
+    priorityBoost:int=0,
+    wDogOutput=None,
+    wDogLifetime=None,
+    shell:bool=False
+    )->int:
     """
     Conveniently run a program using python.
     """
-    return Application(shell).run(cmd,callbacks,hideWindows,priorityBoost,wDogOutput,wDogLifetime)
+    return Application(shell).run(
+        cmd,callbacks,hideWindows,priorityBoost,wDogOutput,wDogLifetime)
 
 
 def getWindowsByPid(pid:int)->typing.List:
@@ -95,8 +103,8 @@ class Application:
 
     def __init__(self,runInShell:bool=True,runInShellCommandFlag:str='-c'):
         """
-        If runInShell=True,then use the default shell.  If it is a string,use the
-        default shell.
+        If runInShell=True,then use the default shell.  If it is a string,
+        use the default shell.
         """
         if not runInShell:
             runInShell=None
@@ -128,10 +136,14 @@ class Application:
 
     def getShell(self)->str:
         """
-        This returns the current shell command (regardless of whether or not it would be used)
+        This returns the current shell command
+        (regardless of whether or not it would be used)
         """
         if self.runInShell is None or self.runInShell:
-            out,err=subprocess.Popen('echo $SHELL',stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True).communicate()
+            out,err=subprocess.Popen(
+                'echo $SHELL',
+                stdout=subprocess.PIPE,stderr=subprocess.PIPE,
+                shell=True).communicate()
             if err:
                 out='/bin/sh'
                 print(('ERR: Cannot find shell.  Defaulting to '+out+'.'))
