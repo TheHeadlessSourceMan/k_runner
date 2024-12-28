@@ -18,22 +18,33 @@ class CommandFailedException(Exception):
     def __init__(self,cmd:str,onWhat:str,info:typing.Any):
         self.cmd=cmd
         self.info=info
-        Exception.__init__(self,f'Command:\n--------\n   {cmd}\nFailed on:\n----------\n   {onWhat}\nInfo:\n-----\n   {info}')  # noqa: E501 # pylint: disable=line-too-long
+        msg=[
+            'Command:',
+            '--------',
+            f'   {cmd}',
+            'Failed on:',
+            '----------',
+            f'   {onWhat}'
+            'Info:',
+            '-----',
+            f'   {info}']
+        Exception.__init__(self,'\n'.join(msg))
 class CommandFailedOnReturncodeException(CommandFailedException):
     """
-    Return code of a command indicates a failure
+    Exception for when the return value of a shell command is nonzero
     """
     def __init__(self,cmd:str,info:int):
         CommandFailedException.__init__(self,cmd,'Return Code',info)
 class CommandFailedOnStderrException(CommandFailedException):
     """
-    Presence of stderr stream output indicates a failure
+    Exception for when messages come out on the stderr stream
+    of a shell command
     """
     def __init__(self,cmd:str,info:str):
         CommandFailedException.__init__(self,cmd,'Stderr',info)
 class CommandFailedOnMissingArgumentException(CommandFailedException):
     """
-    There was a missing argument to a command
+    Exception for when two few arguments are supplied
     """
     def __init__(self,cmd:str,info:int):
         CommandFailedException.__init__(self,cmd,'Missing Argument',info)
@@ -253,9 +264,8 @@ def runCommandServer(port:int=8101,**kwargs):
                     if len(kv)<2:
                         kv.append('')
                     params[URL.urldecode(kv[0])]=URL.urldecode(kv[1])
-                print('command('+
-                      (','.join([f'{k}="{v}"' for k,v in params.items()]))+
-                      ')')
+                paramsStr=','.join([f'{k}="{v}"' for k,v in params.items()])
+                print(f'command({paramsStr})')
                 results={}
                 for k,v in commandTag(**params).items():
                     results[k]=v.jsonObj
@@ -270,13 +280,14 @@ def runCommandServer(port:int=8101,**kwargs):
             except Exception:
                 import io
                 import traceback
-                errors = io.StringIO()
+                errors=io.StringIO()
                 traceback.print_exc(file=errors)
                 self.send_error(500,f'ERROR:\n{errors.getvalue()}')
 
     server_address=('127.0.0.1',int(port))
     server=HTTPServer(server_address,CommandHandler)
-    print(f'Starting command server on http://{server_address[0]}:{server_address[1]}/command?') # noqa: E501 # pylint: disable=line-too-long
+    url=f'http://{server_address[0]}:{server_address[1]}/command?'
+    print(f'Starting command server on {url}')
     server.serve_forever(1)
 
 
