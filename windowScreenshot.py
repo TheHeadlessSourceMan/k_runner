@@ -5,10 +5,10 @@ This program captures a window as an image.  It can even be a "hidden" window!
 """
 import typing
 from ctypes import windll
-import win32con
-import win32gui
-import win32ui
-import win32process
+import win32con # type: ignore
+import win32gui # type: ignore
+import win32ui # type: ignore
+import win32process # type: ignore
 if typing.TYPE_CHECKING:
     import PIL
 
@@ -33,6 +33,7 @@ class WindowScreenshot:
         """
         set the minimize animation status
         """
+        _=hWnd
         old=win32gui.SystemParametersInfo(win32con.SPI_GETANIMATION,None,None)
         if old!=status:
             win32gui.SystemParametersInfo(
@@ -47,7 +48,8 @@ class WindowScreenshot:
         returns the original value
         """
         wlong=win32gui.GetWindowLong(hWnd,win32con.GWL_EXSTYLE)
-        colorkey,alpha,flags=win32gui.GetLayeredWindowAttributes(hWnd)
+        colorKey,alpha,flags=win32gui.GetLayeredWindowAttributes(hWnd)
+        _=colorKey
         old=(wlong|win32con.WS_EX_LAYERED)>0 \
             and alpha==1 \
             and (flags|win32con.WS_EX_LAYERED)>0
@@ -89,11 +91,11 @@ class WindowScreenshot:
         windll.user32.PrintWindow(hWnd,dc.GetSafeHdc(),0)
         bmp=win32ui.CreateBitmap()
         bmp.CreateCompatibleBitmap(dc,w,h)
-        bitmapbits=bmp.GetBitmapBits(True)
-        img=PIL.Image.frombuffer('RGBA',(w,h),bitmapbits,'raw','BGRA',0,1)
+        bitmapBits=bmp.GetBitmapBits(True)
+        img=PIL.Image.frombuffer('RGBA',(w,h),bitmapBits,'raw','BGRA',0,1)
         return img
 
-    def _capture(self,hWnd:HWND,getChildren:bool=True)->'PIL.Image':
+    def _capture(self,hWnd:HWND,getChildren:bool=True)->'PIL.Image.Image':
         """
         do the actual capturing
         """
@@ -102,7 +104,7 @@ class WindowScreenshot:
             pass # TODO: try win32gui.EnumChildWindows()
         return img
 
-    def capture(self,hWnd:HWND,getChildren:bool=True)->'PIL.Image':
+    def capture(self,hWnd:HWND,getChildren:bool=True)->'PIL.Image.Image':
         """
         Capture the window contents to an image
         """
@@ -111,7 +113,7 @@ class WindowScreenshot:
         oldMin=self.minimize(hWnd,False)
         img=self._capture(hWnd,getChildren)
         self.minimize(hWnd,oldMin)
-        self.setTransparency(hWnd,oldTransparency)
+        self.setTransparency(hWnd,oldTransparency==1)
         self.setMinimizeAnimation(hWnd,oldMinAnimation)
         return img
 
@@ -122,20 +124,20 @@ def cmdline(args):
 
     :param args: command line arguments (WITHOUT the filename)
     """
-    printhelp=False
+    printHelp=False
     if not args:
-        printhelp=True
+        printHelp=True
     else:
         for arg in args:
             if arg.startswith('-'):
                 arg=[a.strip() for a in arg.split('=',1)]
                 if arg[0] in ['-h','--help']:
-                    printhelp=True
+                    printHelp=True
                 else:
                     print(('ERR: unknown argument "'+arg[0]+'"'))
             else:
                 print(('ERR: unknown argument "'+arg+'"'))
-    if printhelp:
+    if printHelp:
         print('Usage:')
         print('   windowScreenshot.py [options]')
         print('Options:')

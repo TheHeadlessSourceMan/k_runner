@@ -27,7 +27,7 @@ HIGH_PRIORITY=100
 HIGHEST_PRIORITY=100
 REALTIME_PRIORITY=101
 
-def _getWinowsPriorityCode(pri:int)->int:
+def _getWindowsPriorityCode(pri:int)->int:
     """
     weirdly the values for windows priority
     codes don't follow any real pattern
@@ -45,7 +45,7 @@ def _getWinowsPriorityCode(pri:int)->int:
         return 128
     return 256
 
-def _getWinowsWmicPriority(pri:int)->str:
+def _getWindowsWmicPriority(pri:int)->str:
     """
     for the wmic.exe command
     """
@@ -61,7 +61,7 @@ def _getWinowsWmicPriority(pri:int)->str:
         return 'High'
     return 'Realtime'
 
-def _getWinowsPriorityName(pri:int)->str:
+def _getWindowsPriorityName(pri:int)->str:
     """
     For the start.exe command
     """
@@ -78,13 +78,19 @@ def _getWinowsPriorityName(pri:int)->str:
     return 'Realtime'
 
 
-def extendStringNotifies(extendThis:StringNotifyList,withThis:typing.Optional[StringNotifies])->None:
+def extendStringNotifies(
+    extendThis:StringNotifyList,
+    withThis:typing.Optional[StringNotifies]
+    )->None:
+    """
+    Helper to add to a string notify list
+    """
     if withThis is not None:
         if callable(withThis):
             extendThis.append(withThis)
         else:
             extendThis.extend(withThis)
-            
+
 
 def commandlineSplit(cmdline:typing.Union[str,typing.Iterable[str]]
     )->typing.Tuple[str,typing.List[str]]:
@@ -101,7 +107,7 @@ def commandlineSplit(cmdline:typing.Union[str,typing.Iterable[str]]
                 cmd=c
                 first=False
             else:
-                params.append(c)
+                params.append(c) # pylint: disable=modified-iterating-list
         return (cmd,params)
     inQuot=''
     delimitNextQuote=False
@@ -163,29 +169,35 @@ class OsRunResult:
     """
     result of an OsRun operation
     """
-    
+
     def __init__(self,returncode:int,stdout:str,stderr:str,stdouterr:str):
         self.returncode:int=returncode
         self.stdout:str=stdout
         self.stderr:str=stderr
-        self.stdouterr:str=stdouterr # stdout and stderr intermixed as you'd see it on the terminal
+        self.stdouterr:str=stdouterr # stdout and stderr intermixed as you'd see it on the terminal # noqa: E501 # pylint: disable=line-too-long
         self.finished:bool=True
-        
+
     def __eq__(self,v:typing.Any)->bool:
         if isinstance(v,(int,float)):
             return self.returncode==int(v)
         return False
     def __ne__(self,v:typing.Any)->bool:
-        return (self==v)==False
-    
+        return not (self==v)
+
     @property
     def value(self)->int:
+        """
+        Get the return value (int) from the program
+        """
         return self.returncode
     __int__=value
     __float__=value
-    
+
     @property
     def json(self)->str:
+        """
+        Get these results as a json string
+        """
         return json.dumps(self.jsonObj)
     @json.setter
     def json(self,jsonString:typing.Union[str,bytes]):
@@ -195,7 +207,7 @@ class OsRunResult:
 
     def __iter__(self):
         return iter(self.stdouterr.split('\n'))
-    
+
     def __len__(self):
         return len(self.stdouterr)
 
@@ -206,9 +218,12 @@ class OsRunResult:
         if self.succeeded:
             return 1
         return 0
-        
+
     @property
     def jsonObj(self)->typing.Dict[str,typing.Any]:
+        """
+        Return these results as a JSON-compatible object
+        """
         ret:typing.Dict[str,typing.Any]={}
         ret['returncode']=self.returncode
         if not self.finished:
@@ -276,7 +291,7 @@ class OsRunResult:
     stdOutLines=out
     stdoutlines=out
     stdoutLines=out
-        
+
     @property
     def err(self):
         """
@@ -286,9 +301,12 @@ class OsRunResult:
     stdErr=err
     stdErrLines=err
     stderrlines=err
-    
+
     @property
     def stdOutErr(self):
+        """
+        Combined stdout and stderr
+        """
         return self.stdouterr
     stdOuterr=stdOutErr
     stdOutErrLines=stdOutErr
@@ -297,27 +315,29 @@ class OsRunResult:
     outerr=stdOutErr
     outerrLines=stdOutErr
     outErrLines=stdOutErr
-    
+
     @property
     def succeeded(self):
         """
         judging by the returncode and stderr,
         determine if the command succeeded
-        
-        NOTE: assumption not always the case.  be sure to check your command's documentation before using.
+
+        NOTE: assumption not always the case.
+        be sure to check your command's documentation before using.
         """
         return self.returncode==0 and not self.stderr
-        
+
     @property
     def failed(self):
         """
         judging by the returncode and stderr,
         determine if the command succeeded
-        
-        NOTE: assumption not always the case.  be sure to check your command's documentation before using.
+
+        NOTE: assumption not always the case.
+        Be sure to check your command's documentation before using.
         """
         return not self.succeeded
-        
+
     def __repr__(self):
         return self.stdouterr
 OsRunResults=OsRunResult
@@ -329,7 +349,7 @@ class OsRunBuf:
 
     (typically, a process would have stdout,stderr, and combined buffers)
     """
-    
+
     def __init__(self,
         callOnChar:typing.Optional[StringNotifies]=None,
         callOnLine:typing.Optional[StringNotifies]=None):
@@ -341,14 +361,14 @@ class OsRunBuf:
         self.callOnLine:StringNotifyList=[]
         self.addCallOnLine(callOnLine)
         self.addCallOnChar(callOnChar)
-        self.encoding='utf-8' # one of the standard encodings https://docs.python.org/3/library/codecs.html#standard-encodings
-        
+        self.encoding='utf-8' # one of the standard encodings https://docs.python.org/3/library/codecs.html#standard-encodings # noqa: E501 # pylint: disable=line-too-long
+
     def addCallOnLine(self,addThis:typing.Optional[StringNotifies]=None)->None:
         """
         add function(s) to call on new line of data
         """
         extendStringNotifies(self.callOnLine,addThis)
-        
+
     def addCallOnChar(self,addThis:typing.Optional[StringNotifies]=None)->None:
         """
         add function(s) to call on new char of data
@@ -356,9 +376,12 @@ class OsRunBuf:
         extendStringNotifies(self.callOnChar,addThis)
 
     def clear(self)->None:
+        """
+        Clear this buffer
+        """
         self._line=[]
         self._lines=[]
-    
+
     def append(self,data:bytes)->None:
         """
         add bytes to the buffer
@@ -382,7 +405,7 @@ class OsRunBuf:
                         c(q)
             else:
                 self._line.append(data)
-    
+
     def lineIter(self)->typing.Generator[str,None,None]:
         """
         iterate over the result lines as they come in
@@ -405,13 +428,16 @@ class OsRunBuf:
     __iter__=lineIter
 
     def toString(self)->str:
+        """
+        Convert this buffer to a string
+        """
         if self._line:
             self._lines.append(b''.join(self._line))
             self._line.clear()
         return b'\n'.join(self._lines).strip().decode(self.encoding,'ignore')
     def __repr__(self)->str:
         return self.toString()
-    
+
     def __cmp__(self,other:typing.Any)->bool:
         """
         other will be converted to string
@@ -419,23 +445,26 @@ class OsRunBuf:
         if not isinstance(other,str):
             other=str(other)
         return other==str(self)
-        
+
 
 class OsRunException(Exception):
     """
     Thrown when there is a problem running a given command
     """
-    def __init__(self,cmd:typing.List[str],cause:typing.Optional[Exception]=None):
+    def __init__(self,
+        cmd:typing.List[str],
+        cause:typing.Optional[Exception]=None):
+        """ """
         self.cmd=cmd
         self.cause=cause
         msg=f'Trouble running:\n\t{cmd}'
         if cause is not None:
-            amsg=[f'{msg}\nCaused by:']
-            amsg.extend(str(cause).split('\n'))
-            msg='\n\t'.join(amsg)
+            aMsg=[f'{msg}\nCaused by:']
+            aMsg.extend(str(cause).split('\n'))
+            msg='\n\t'.join(aMsg)
         Exception.__init__(self,msg)
-        
-   
+
+
 class OsRunJob:
     """
     Starts a new job running and collects the results.
@@ -451,52 +480,62 @@ class OsRunJob:
         """ """
         self._result:typing.Optional[OsRunResult]=None
         self.running:bool=False
-        self.outBuf:OsRunBuf=OsRunBuf(callOnLine=callOnStdoutLine,callOnChar=callOnStdoutChar)
-        self.errBuf:OsRunBuf=OsRunBuf(callOnLine=callOnStderrLine,callOnChar=callOnStderrChar)
-        self.outerrBuf:OsRunBuf=OsRunBuf(callOnLine=callOnStdoutErrLine,callOnChar=callOnStdoutErrChar)
+        self.outBuf:OsRunBuf=OsRunBuf(
+            callOnLine=callOnStdoutLine,callOnChar=callOnStdoutChar)
+        self.errBuf:OsRunBuf=OsRunBuf(
+            callOnLine=callOnStderrLine,callOnChar=callOnStderrChar)
+        self.outerrBuf:OsRunBuf=OsRunBuf(
+            callOnLine=callOnStdoutErrLine,callOnChar=callOnStdoutErrChar)
         self._outThread:typing.Optional[Thread]=None
         self._errThread:typing.Optional[Thread]=None
         self._popen:typing.Optional[subprocess.Popen]=None
         self._lastReturncode:int=-9999
-        self.workingDirectory:typing.Optional[str]=osRun.workingDirectory # keep a copy in case they change it
+        self.workingDirectory:typing.Optional[str]=\
+            osRun.workingDirectory # keep a copy in case they change it
         self.osRun=osRun
-    
-    def addCallOnStdoutLine(self,addThis:typing.Optional[StringNotifies]=None)->None:
+
+    def addCallOnStdoutLine(self,
+        addThis:typing.Optional[StringNotifies]=None)->None:
         """
         add function(s) to call on new line of data
         """
         self.outBuf.addCallOnLine(addThis)
-        
-    def addCallOnStdoutChar(self,addThis:typing.Optional[StringNotifies]=None)->None:
+
+    def addCallOnStdoutChar(self,
+        addThis:typing.Optional[StringNotifies]=None)->None:
         """
         add function(s) to call on new char of data
         """
         self.outBuf.addCallOnChar(addThis)
-    
-    def addCallOnStderrLine(self,addThis:typing.Optional[StringNotifies]=None)->None:
+
+    def addCallOnStderrLine(self,
+        addThis:typing.Optional[StringNotifies]=None)->None:
         """
         add function(s) to call on new line of data
         """
         self.errBuf.addCallOnLine(addThis)
-        
-    def addCallOnStderrChar(self,addThis:typing.Optional[StringNotifies]=None)->None:
+
+    def addCallOnStderrChar(self,
+        addThis:typing.Optional[StringNotifies]=None)->None:
         """
         add function(s) to call on new char of data
         """
         self.errBuf.addCallOnChar(addThis)
-    
-    def addCallOnStdoutErrLine(self,addThis:typing.Optional[StringNotifies]=None)->None:
+
+    def addCallOnStdoutErrLine(self,
+        addThis:typing.Optional[StringNotifies]=None)->None:
         """
         add function(s) to call on new line of data
         """
         self.outerrBuf.addCallOnLine(addThis)
-        
-    def addCallOnStdoutErrChar(self,addThis:typing.Optional[StringNotifies]=None)->None:
+
+    def addCallOnStdoutErrChar(self,
+        addThis:typing.Optional[StringNotifies]=None)->None:
         """
         add function(s) to call on new char of data
         """
         self.outerrBuf.addCallOnChar(addThis)
-        
+
     @property
     def pid(self)->typing.Optional[int]:
         """
@@ -506,19 +545,28 @@ class OsRunJob:
         if self._popen is None:
             return None
         return self._popen.pid
-        
+
     def debugLog(self,txt:str)->None:
         """
         this is what gets called to log lines of debug text
         """
         print(txt)
-        
+
     def write(self,*vals):
+        """
+        Write data to the job's stdin
+
+        (NOTE: if you want carriage return, you
+        may want to use writeln() instead)
+        """
         if self._popen is not None:
             v=' '.join([str(v) for v in vals])
             self._popen.stdin.write(v)
             self._popen.stdin.flush()
     def writeln(self,*vals):
+        """
+        Write data to the job's stdin
+        """
         if self._popen is not None:
             v=' '.join([str(v) for v in vals])
             self._popen.stdin.write(v)
@@ -531,8 +579,10 @@ class OsRunJob:
         """
         start the thing running
 
-        :moreParams: add more parameters in addition to the ones specified in the constructor
-            the idea is you could set up the command the way you want it, then run on multiple files
+        :moreParams: add more parameters in addition to the ones specified
+            in the constructor
+            the idea is you could set up the command the way you want it,
+            then run on multiple files
         :workingDirectory: override the app's working directory
         """
         if self.running:
@@ -559,7 +609,7 @@ class OsRunJob:
             cmd.extend(moreParams)
         # launch the program
         creationflags=0
-        if self.osRun.detatch:
+        if self.osRun.detach:
             DETACHED_PROCESS=0x00000008
             creationflags=DETACHED_PROCESS
         previousDirectory=None
@@ -570,35 +620,45 @@ class OsRunJob:
             if os.name=='nt':
                 # of the form:
                 #     start "" /AboveNormal "C:\Windows\System32\mspaint.exe"
-                # see also: https://www.tenforums.com/tutorials/89548-set-cpu-process-priority-applications-windows-10-a.html
+                # see also:
+                # https://www.tenforums.com/tutorials/89548-set-cpu-process-priority-applications-windows-10-a.html
                 if workingDirectory is None:
-                    cmdpath=os.path.abspath(cmd[0])
+                    cmdPath=os.path.abspath(cmd[0])
                 else:
-                    cmdpath=os.path.abspath(os.sep.join((workingDirectory,cmd[0])))
-                if not os.path.isfile(cmdpath):
-                    cmdpath=cmd[0]
-                winPri=_getWinowsPriorityName(self.osRun.priority)
-                newCmd=['start','',f'/{winPri}',cmdpath]
+                    cmdPath=os.path.abspath(
+                        os.sep.join((workingDirectory,cmd[0])))
+                if not os.path.isfile(cmdPath):
+                    cmdPath=cmd[0]
+                winPri=_getWindowsPriorityName(self.osRun.priority)
+                newCmd=['start','',f'/{winPri}',cmdPath]
                 if len(cmd)>1:
                     newCmd.extend(cmd[1:])
                 cmd=newCmd
                 self.osRun.shell=True
                 self.osRun.debug=True # TODO: temporary
             else:
-                # not sure how to do this.  Maybe the "nice" command or something??
+                # TODO: not sure how to do this.
+                # Maybe the "nice" command or something??
                 raise NotImplementedError()
         if self.osRun.debug:
             print('$> ',' '.join(cmd))
         try:
-            # NOTE: the following throws a warning message, thus the workaround.
+            # NOTE: the following throws a warning message,
+            # thus the workaround below.
             # see:
             #    https://bugs.python.org/issue32236
-            #self._popen=subprocess.Popen(cmd,shell=self.osRun.shell,stdout=subprocess.PIPE,stderr=subprocess.PIPE,
+            #self._popen=subprocess.Popen(cmd,
+            #    shell=self.osRun.shell,
+            #    stdout=subprocess.PIPE,stderr=subprocess.PIPE,
             #    bufsize=1,creationflags=creationflags,cwd=workingDirectory)
-            self._popen=subprocess.Popen(cmd,shell=self.osRun.shell,stdout=subprocess.PIPE,stderr=subprocess.PIPE,
-                stdin=subprocess.PIPE,creationflags=creationflags,cwd=workingDirectory,env=self.osRun.env)
+            self._popen=subprocess.Popen(cmd,
+                shell=self.osRun.shell,
+                stdout=subprocess.PIPE,stderr=subprocess.PIPE,
+                stdin=subprocess.PIPE,
+                creationflags=creationflags,
+                cwd=workingDirectory,env=self.osRun.env)
         except Exception as e:
-            raise OsRunException(cmd,e)
+            raise OsRunException(cmd,e) from e
         if previousDirectory is not None:
             os.chdir(previousDirectory)
         # start reading the data
@@ -612,17 +672,22 @@ class OsRunJob:
             stream.close()
             bufB.done=True
             # last one out shuts down popen
-            if self._popen is not None and self._popen.stdout.closed and self._popen.stderr.closed:
+            if self._popen is not None \
+                and self._popen.stdout.closed \
+                and self._popen.stderr.closed:
+                #
                 self.running=False
                 bufA.done=True
-        self._outThread=Thread(target=_readerThread,args=(self._popen.stdout,self.outerrBuf,self.outBuf))
-        self._outThread.daemon=True # thread should shutdown when our thread does
+        self._outThread=Thread(target=_readerThread,
+            args=(self._popen.stdout,self.outerrBuf,self.outBuf))
+        self._outThread.daemon=True # thread shuts down when our thread does
         self._outThread.start()
-        self._errThread=Thread(target=_readerThread,args=(self._popen.stderr,self.outerrBuf,self.errBuf))
-        self._errThread.daemon=True # thread should shutdown when our thread does
+        self._errThread=Thread(target=_readerThread,
+            args=(self._popen.stderr,self.outerrBuf,self.errBuf))
+        self._errThread.daemon=True # thread shuts down when our thread does
         self._errThread.start()
         # returns immediately, leaving the program to run
-        
+
     def stop(self):
         """
         stop the running program
@@ -640,13 +705,13 @@ class OsRunJob:
         if self._errThread is not None:
             #self._errThread.stop()
             self._errThread=None
-        
+
     def __del__(self):
         """
         when we go out of scope, stop everything
         """
         self.stop()
-    
+
     @property
     def result(self)->typing.Optional[OsRunResult]:
         """
@@ -663,14 +728,14 @@ class OsRunJob:
             else:
                 self._result=result
         return self._result
-    
+
     def wait(self,maxWait:typing.Optional[float]=None)->OsRunResult:
         """
         wait for the program to complete and return the result
-        
+
         if maxWait=[seconds] expires, will stop the job and return as much
             data as it can get.  also result.finished will be False
-        
+
         :throws TimeoutError: if maxWait is exceeded
         """
         remainingTime=maxWait
@@ -683,7 +748,7 @@ class OsRunJob:
                     raise TimeoutError()
         if self._popen is not None:
             if self._popen.returncode is None:
-                self._lastReturncode=self._popen.wait() # sometimes there is a race cond where it has finished, but has not yet written the returncode
+                self._lastReturncode=self._popen.wait() # sometimes there is a race cond where it has finished, but has not yet written the returncode # noqa: E501 # pylint: disable=line-too-long
             else:
                 self._lastReturncode=self._popen.returncode
         result=self.result
@@ -691,34 +756,42 @@ class OsRunJob:
         if result is None:
             raise Exception("Never ran anything!")
         return result
-            
-    
+
+
 class OsRun:
     """
     Run a system application.
 
     Handy shortcuts:
-        results=OsRun(cmdline).run() # simplest way to run a command and get the results
+
+        # simplest way to run a command and get the results
+        results=OsRun(cmdline).run()
+
         results=OsRun(cmdline)() # even shorter way of doing the same thing
         results=OsRun(cmdline,shell=True)() # run with a shell environment
         results=OsRun(cmdline,args[]).run() # run with arguments
         results=OsRun(cmdline).run(args[]) # run with arguments after the fact
 
-        if OsRun(cmdline).poe(args[]): # print any errors and do the code if there are none
+        # print any errors and do the code if there are none
+        if OsRun(cmdline).poe(args[]):
             ...
 
-        for line in OsRun(cmdline): # if you want to run and catch each line as it comes out
+        # if you want to run and catch each line as it comes out
+        for line in OsRun(cmdline):
             ... # do something
-        
+
         # start up multiple instances from one OsRun specification.
         imageFilenames=[]
-        gimp=OsRun("gimp") # if you don't want them to shut down when jobs[] goes out of scope you could add detatch=True
+        # if you don't want them to shut down when jobs[]
+        # goes out of scope you could add detach=True
+        gimp=OsRun("gimp")
         jobs=[gimp.runAsync(filename) for filename in imageFilenames]
         for job in jobs:
             job.wait()
 
         try:
-            results=OsRun(cmdline).run(maxWait=60) # time out if the program takes too long
+            # time out if the program takes too long
+            results=OsRun(cmdline).run(maxWait=60)
         except TimeoutError:
             pass
 
@@ -730,24 +803,25 @@ class OsRun:
 
         if results: # same as results.success
 
-
-            
             ...
 
         print(results.stdouterr) # print both in their correct order
         print(results) # same, but simpler to read
-        
+
     Run modes:
-        run()->OsRunResult 
-            start and block until completion, terminate program if object is deleted (which is unlikely)
-            use if you need the program to complete or its output before proceeding
+        run()->OsRunResult
+            start and block until completion, terminate program
+            if object is deleted (which is unlikely)
+            use if you need the program to complete
+            or its output before proceeding
         runAsync()->OsRunJob
-            start in bg and move on with this thread, terminate program if object is deleted
+            start in bg and move on with this thread, terminate program
+            if object is deleted
             use if you need to do something else while the program is running
-        detatch runAsync()->None
+        detach runAsync()->None
             run even if the object (or even the creator app) goes out of scope
             use for starting other applications that will out-live your own
-        detatch run()
+        detach run()
             Not allowed (doesn't make sense)
     """
 
@@ -755,7 +829,7 @@ class OsRun:
         cmd:typing.Union[str,typing.Iterable[str]],
         params:typing.Optional[typing.Iterable[str]]=None,
         shell:bool=False,
-        detatch:bool=False,
+        detach:bool=False,
         debug:bool=False,
         cmdLineSplit:typing.Optional[bool]=None,
         workingDirectory:typing.Optional[str]=None,
@@ -777,9 +851,11 @@ class OsRun:
             if None (default) will only attempt if params[] is None
         """
         useParams:typing.List[str]=[]
-        if cmd is not None and isinstance(cmd,Iterable) and not isinstance(cmd,str):
-            if not isinstance(cmd,Iterable) and not isinstance(cmd,str):
-                cmd=list(cmd)
+        if cmd is not None \
+            and isinstance(cmd,Iterable) \
+            and not isinstance(cmd,str):
+            #
+            cmd=list(cmd)
             # they mistakenly sent in all args in the cmd
             if len(cmd)>1:
                 params=cmd[1:]
@@ -796,57 +872,69 @@ class OsRun:
         self.priority=priority
         self.params:typing.List[str]=useParams # params to pass to the command
         self.cmd:str=cmd # command to run
-        self.shell:bool=shell # run in the system shell environment (slower and usually unnecessary)
-        self.detatch:bool=detatch # detatch from this process/run in background
-        self.debug:bool=debug # print the command input and output for debugging
+        self.shell:bool=shell # run in the system shell environment (slower and usually unnecessary) # noqa: E501 # pylint: disable=line-too-long
+        self.detach:bool=detach # detach from this process/run in background
+        self.debug:bool=debug # print the command input and output for debugging # noqa: E501 # pylint: disable=line-too-long
         self.workingDirectory:typing.Optional[str]=workingDirectory
         if env is None:
             env=dict(os.environ)
         self.env:typing.Dict[str,typing.Any]=env
-        self.callOnStdoutLine:StringNotifyList=[]   
+        self.callOnStdoutLine:StringNotifyList=[]
         self.callOnStderrLine:StringNotifyList=[]
         self.callOnStdoutErrLine:StringNotifyList=[]
         self.callOnStdoutChar:StringNotifyList=[]
         self.callOnStderrChar:StringNotifyList=[]
         self.callOnStdoutErrChar:StringNotifyList=[]
-        self.addCallOnStdoutLine(callOnStdoutLine) 
+        self.addCallOnStdoutLine(callOnStdoutLine)
         self.addCallOnStderrLine(callOnStderrLine)
         self.addCallOnStdoutErrLine(callOnStdoutErrLine)
         self.addCallOnStdoutChar(callOnStdoutChar)
         self.addCallOnStderrChar(callOnStderrChar)
         self.addCallOnStdoutErrChar(callOnStdoutErrChar)
-    
-    def addCallOnStdoutLine(self,addThis:typing.Optional[StringNotifies]=None)->None:
+
+    def addCallOnStdoutLine(self,
+        addThis:typing.Optional[StringNotifies]=None
+        )->None:
         """
         add function(s) to call on new line of data
         """
         extendStringNotifies(self.callOnStdoutLine,addThis)
-        
-    def addCallOnStdoutChar(self,addThis:typing.Optional[StringNotifies]=None)->None:
+
+    def addCallOnStdoutChar(self,
+        addThis:typing.Optional[StringNotifies]=None
+        )->None:
         """
         add function(s) to call on new char of data
         """
         extendStringNotifies(self.callOnStdoutChar,addThis)
-    
-    def addCallOnStderrLine(self,addThis:typing.Optional[StringNotifies]=None)->None:
+
+    def addCallOnStderrLine(self,
+        addThis:typing.Optional[StringNotifies]=None
+        )->None:
         """
         add function(s) to call on new line of data
         """
         extendStringNotifies(self.callOnStderrLine,addThis)
-        
-    def addCallOnStderrChar(self,addThis:typing.Optional[StringNotifies]=None)->None:
+
+    def addCallOnStderrChar(self,
+        addThis:typing.Optional[StringNotifies]=None
+        )->None:
         """
         add function(s) to call on new char of data
         """
         extendStringNotifies(self.callOnStderrChar,addThis)
-    
-    def addCallOnStdoutErrLine(self,addThis:typing.Optional[StringNotifies]=None)->None:
+
+    def addCallOnStdoutErrLine(self,
+        addThis:typing.Optional[StringNotifies]=None
+        )->None:
         """
         add function(s) to call on new line of data
         """
         extendStringNotifies(self.callOnStdoutErrLine,addThis)
-        
-    def addCallOnStdoutErrChar(self,addThis:typing.Optional[StringNotifies]=None)->None:
+
+    def addCallOnStdoutErrChar(self,
+        addThis:typing.Optional[StringNotifies]=None
+        )->None:
         """
         add function(s) to call on new char of data
         """
@@ -854,6 +942,9 @@ class OsRun:
 
     @property
     def json(self)->str:
+        """
+        This run as a json string
+        """
         return json.dumps(self.jsonObj)
     @json.setter
     def json(self,jsonString:typing.Union[str,bytes]):
@@ -863,13 +954,16 @@ class OsRun:
 
     @property
     def jsonObj(self)->typing.Dict[str,typing.Any]:
+        """
+        This run as a json-compatible object
+        """
         ret:typing.Dict[str,typing.Any]={'cmd':self.cmd}
         if self.params:
             ret['params']=self.params
         if self.shell:
             ret['shell']=self.shell
-        if self.detatch:
-            ret['detatch']=self.detatch
+        if self.detach:
+            ret['detach']=self.detach
         if self.debug:
             ret['debug']=self.debug
         if self.workingDirectory is not None and self.workingDirectory:
@@ -880,7 +974,7 @@ class OsRun:
         self.cmd=jsonObj.get('cmd','')
         self.params=jsonObj.get('params',[])
         self.shell=jsonObj.get('shell',False)
-        self.detatch=jsonObj.get('detatch',False)
+        self.detach=jsonObj.get('detach',False)
         self.debug=jsonObj.get('debug',False)
         self.workingDirectory=jsonObj.get('workingDirectory',None)
 
@@ -903,16 +997,19 @@ class OsRun:
         f=open(filename,'wb')
         f.write(self.json.encode('utf-8'))
         f.close()
-        
-    def __call__(self,moreParams:typing.Optional[typing.Iterable[str]]=None,
-        workingDirectory:typing.Optional[str]=None,maxWait:typing.Optional[float]=None)->OsRunResult:
+
+    def __call__(self,
+        moreParams:typing.Optional[typing.Iterable[str]]=None,
+        workingDirectory:typing.Optional[str]=None,
+        maxWait:typing.Optional[float]=None
+        )->OsRunResult:
         """
         shortcut for run()
 
         returns (returncode,stdout,stderr,stdouterr)
         """
         return self.run(moreParams,workingDirectory,maxWait)
-    
+
     def run(self,
         moreParams:typing.Optional[typing.Iterable[str]]=None,
         workingDirectory:typing.Optional[str]=None,
@@ -933,8 +1030,9 @@ class OsRun:
 
         NOTE: this is literally the same thing as runAsync().wait()
         """
-        if self.detatch:
-            raise Exception('For detatched process, only runAsync() is supported!')
+        if self.detach:
+            raise Exception(
+                'For detached process, only runAsync() is supported!')
         job=self.runAsync(
             moreParams,
             workingDirectory,
@@ -963,7 +1061,7 @@ class OsRun:
         try:
             ret=self.run(moreParams,workingDirectory,maxWait)
         except TimeoutError:
-            errStr=str("ERR: job took longer than %s sec and was killed."%str(maxWait))
+            errStr="ERR: job took longer than %s sec and was killed."%str(maxWait) # noqa: E501 # pylint: disable=line-too-long
             ret=OsRunResult(-2400,'',errStr,errStr)
         if ret.failed:
             print(ret,file=sys.stderr)
@@ -983,7 +1081,7 @@ class OsRun:
         run the command asynchronously
 
         returns RunJob object representing the current job
-        
+
         NOTE: if RunJob is garbage collected, the job itself will terminate
         """
         job=OsRunJob(self,
@@ -1002,15 +1100,19 @@ class OsRun:
         job.start(moreParams,workingDirectory)
         return job
 
-    def runIterAllOutput(self,moreParams:typing.Optional[typing.Iterable[str]]=None,
-        workingDirectory:typing.Optional[str]=None)->typing.Generator[str,None,None]:
+    def runIterAllOutput(self,
+        moreParams:typing.Optional[typing.Iterable[str]]=None,
+        workingDirectory:typing.Optional[str]=None
+        )->typing.Generator[str,None,None]:
         """
-        The idea is you run the command and get the lines back one at a time as an iterator
+        The idea is you run the command and get the lines back
+        one at a time as an iterator
 
         for line in OsRun("ps -A").runIterAllOutput():
             ...
 
-        NOTE: if you don't care about moreParams or maxWait, you can get even simpler
+        NOTE: if you don't care about moreParams or maxWait,
+            you can get even simpler, eg:
             for line in OsRun("ps -A"):
                 ...
         """
@@ -1018,11 +1120,14 @@ class OsRun:
         it=job.outerrBuf.lineIter()
         job.start(moreParams,workingDirectory)
         yield from it
-        
-    def runIterStdout(self,moreParams:typing.Optional[typing.Iterable[str]]=None,
-        workingDirectory:typing.Optional[str]=None)->typing.Generator[str,None,None]:
+
+    def runIterStdout(self,
+        moreParams:typing.Optional[typing.Iterable[str]]=None,
+        workingDirectory:typing.Optional[str]=None
+        )->typing.Generator[str,None,None]:
         """
-        The idea is you run the command and get the stdout lines back one at a time as an iterator
+        The idea is you run the command and get the stdout lines
+        back one at a time as an iterator
 
         for line in OsRun("ps -A").runIterStdout():
             ...
@@ -1033,11 +1138,14 @@ class OsRun:
         it=job.outBuf.lineIter()
         job.start(moreParams,workingDirectory)
         yield from it
-        
-    def runIterStderr(self,moreParams:typing.Optional[typing.Iterable[str]]=None,
-        workingDirectory:typing.Optional[str]=None)->typing.Generator[str,None,None]:
+
+    def runIterStderr(self,
+        moreParams:typing.Optional[typing.Iterable[str]]=None,
+        workingDirectory:typing.Optional[str]=None
+        )->typing.Generator[str,None,None]:
         """
-        The idea is you run the command and get the stderr lines back one at a time as an iterator
+        The idea is you run the command and get the stderr
+        lines back one at a time as an iterator
 
         for line in OsRun("ps -A").runIterStderr():
             ...
@@ -1060,7 +1168,7 @@ def osrun(
     cmd:typing.Union[str,typing.Iterable[str]],
     params:typing.Optional[typing.Iterable[str]]=None,
     shell:bool=False,
-    detatch:bool=False,
+    detach:bool=False,
     debug:bool=False,
     cmdLineSplit:typing.Optional[bool]=None,
     workingDirectory:typing.Optional[str]=None,
@@ -1075,7 +1183,7 @@ def osrun(
     """ shortcut for OsRun().run(...) """
     return OsRun(cmd,
         params,shell,
-        detatch,debug,
+        detach,debug,
         cmdLineSplit,
         workingDirectory,
         env,
@@ -1085,12 +1193,15 @@ def osrun(
         callOnStdoutChar,
         callOnStderrChar,
         callOnStdoutErrChar).run()
-run=osrun    
+run=osrun
 
 def cmdline(args:typing.Iterable[str])->int:
-    printhelp=False
+    """
+    Run this like from the command line
+    """
+    printHelp=False
     shell=False
-    detatch=False
+    detach=False
     maxWait=None
     useIter=True # whether to iterate on each line or dump them all at the end
     dashMode=False
@@ -1108,17 +1219,17 @@ def cmdline(args:typing.Iterable[str])->int:
             if av[0]=='-':
                 dashMode=True
             elif av[0]=='--help':
-                printhelp=True
+                printHelp=True
             elif av[0]=='--shell':
                 if len(av)<2:
                     shell=True
                 else:
                     shell=av[1][0].lower() in ('1','t','y')
-            elif av[0]=='--detatch':
+            elif av[0]=='--detach':
                 if len(av)<2:
-                    detatch=True
+                    detach=True
                 else:
-                    detatch=av[1][0].lower() in ('1','t','y')
+                    detach=av[1][0].lower() in ('1','t','y')
             elif av[0]=='--maxWait':
                 if len(av)<2:
                     maxWait=None
@@ -1126,9 +1237,9 @@ def cmdline(args:typing.Iterable[str])->int:
                     maxWait=float(av[1])
             else:
                 print('ERR: Unknown Argument "%s"'%arg)
-                printhelp=True
+                printHelp=True
         else:
-            osr=OsRun(arg,shell=shell,detatch=detatch,debug=False)
+            osr=OsRun(arg,shell=shell,detach=detach,debug=False)
             if useIter:
                 for line in osr:
                     print(line)
@@ -1136,22 +1247,27 @@ def cmdline(args:typing.Iterable[str])->int:
                 results=osr(maxWait=maxWait)
                 print(results)
     if dashMode:
-        osr=OsRun(dashModeCmd,dashModeArgs,shell=shell,detatch=detatch,debug=False)
+        osr=OsRun(
+            dashModeCmd,
+            dashModeArgs,
+            shell=shell,
+            detach=detach,
+            debug=False)
         if useIter:
             for line in osr:
                 print(line)
         else:
             results=osr(maxWait=maxWait)
             print(results)
-    if printhelp:
-        print('Useage:')
+    if printHelp:
+        print('Usage:')
         print('   osrun.py [options] "[cmd params]" ...')
         print('Options:')
         print('   --help .............. show this help')
         print('   --shell ............. run with a shell environment')
-        print('   --wmaxWait=sec ...... how long to wait for the program')
-        print('   --detatch ........... run detatched from this console (closing console will not close program)')
-        print('   - ................... everything after this point is cmd+params (convenience to not have to quote everything)')
+        print('   --maxWait=sec ...... how long to wait for the program')
+        print('   --detach ........... run detached from this console (closing console will not close program)') # noqa: E501 # pylint: disable=line-too-long
+        print('   - ................... everything after this point is cmd+params (convenience to not have to quote everything)') # noqa: E501 # pylint: disable=line-too-long
         print('NOTE:')
         print('   files and options are evaluated IN ORDER')
         return -1
@@ -1159,5 +1275,4 @@ def cmdline(args:typing.Iterable[str])->int:
 
 
 if __name__=='__main__':
-    import sys
     sys.exit(cmdline(sys.argv[1:]))

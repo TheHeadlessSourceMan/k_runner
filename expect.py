@@ -1,6 +1,6 @@
 """
 This is designed to work with osrun such that it waits until a condition
-is matched, then passes on sobsequent messages
+is matched, then passes on subsequent messages
 """
 import typing
 import re
@@ -8,7 +8,7 @@ import re
 class Expect:
     """
     This is designed to work with osrun such that it waits until a condition
-    is matched, then passes on sobsequent messages
+    is matched, then passes on subsequent messages
     """
     def __init__(self,
         waitFor:typing.Union[str,typing.Pattern,None],

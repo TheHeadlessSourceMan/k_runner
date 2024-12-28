@@ -38,20 +38,20 @@ def cmdline(args:typing.Iterable[str]):
 
     :param args: command line arguments (WITHOUT the filename)
     """
-    printhelp=False
+    printHelp=False
     if not args:
-        printhelp=True
+        printHelp=True
     else:
         for arg in args:
             if arg.startswith('-'):
-                arg=[a.strip() for a in arg.split('=',1)]
-                if arg[0] in ['-h','--help']:
-                    printhelp=True
+                kv=[a.strip() for a in arg.split('=',1)]
+                if kv[0] in ['-h','--help']:
+                    printHelp=True
                 else:
-                    print(('ERR: unknown argument "'+arg[0]+'"'))
+                    print(('ERR: unknown argument "'+kv[0]+'"'))
             else:
                 print(('ERR: unknown argument "'+arg+'"'))
-    if printhelp:
+    if printHelp:
         print('Usage:')
         print('  runSomething.py [options]')
         print('Options:')

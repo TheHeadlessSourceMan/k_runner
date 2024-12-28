@@ -6,26 +6,43 @@ Will execute the command and return the results.
 """
 import typing
 from collections.abc import Iterable,Mapping
-from lxml import etree
-from k_runner import osrun
+from lxml import etree # type: ignore
 from paths import URLCompatible,asURL,URL
+from k_runner import osrun
 
 
 class CommandFailedException(Exception):
+    """
+    Exception that occurs when a command fails
+    """
     def __init__(self,cmd:str,onWhat:str,info:typing.Any):
         self.cmd=cmd
         self.info=info
-        Exception.__init__(self,f'Command:\n--------\n   {cmd}\nFailed on:\n----------\n   {onWhat}\nInfo:\n-----\n   {info}')
+        Exception.__init__(self,f'Command:\n--------\n   {cmd}\nFailed on:\n----------\n   {onWhat}\nInfo:\n-----\n   {info}')  # noqa: E501 # pylint: disable=line-too-long
 class CommandFailedOnReturncodeException(CommandFailedException):
+    """
+    Return code of a command indicates a failure
+    """
     def __init__(self,cmd:str,info:int):
         CommandFailedException.__init__(self,cmd,'Return Code',info)
 class CommandFailedOnStderrException(CommandFailedException):
+    """
+    Presence of stderr stream output indicates a failure
+    """
     def __init__(self,cmd:str,info:str):
         CommandFailedException.__init__(self,cmd,'Stderr',info)
 class CommandFailedOnMissingArgumentException(CommandFailedException):
+    """
+    There was a missing argument to a command
+    """
     def __init__(self,cmd:str,info:int):
         CommandFailedException.__init__(self,cmd,'Missing Argument',info)
-def commandTag(cmdTag:typing.Union[URLCompatible,str,etree.Element],**kwargs)->typing.Dict[str,osrun.OsRunResult]:
+
+
+def commandTag(
+    cmdTag:typing.Union[URLCompatible,str,etree.Element],
+    **kwargs
+    )->typing.Dict[str,osrun.OsRunResult]:
     """
     Given an xml tag of the form
         <command id="my_cmd" cmd="something" />
@@ -36,12 +53,14 @@ def commandTag(cmdTag:typing.Union[URLCompatible,str,etree.Element],**kwargs)->t
         commandTag('<command cmd="do_{foo}.sh" />',foo="splat")
     Will run the command "do_splat.sh"
 
-    Additional arguments can be anything tree-like (object heirarchy, dict tree, etc), eg:
+    Additional arguments can be anything tree-like
+        (object hierarchy, dict tree, etc), eg:
         commandTag('<command cmd="do_{jsondata.x}.sh" />',foo=json.loads('{"x","splat"}'))
     Will run the command "do_splat.sh"
 
-    You can have things in the additional arguments that are not used in any commands,
-    but you cannot have any commands that rely up arguments you don't have. (will raise an exception)
+    You can have things in the additional arguments that are not used in any
+    commands, but you cannot have any commands that rely up arguments you
+    don't have. (will raise an exception)
 
     The additional arguments will be expanded with the results of each call:
         commandTag('<div><command id="x_cmd" cmd="x.sh" /><command cmd="y.sh {x_cmd.stdout}" /></div>')
@@ -55,9 +74,11 @@ def commandTag(cmdTag:typing.Union[URLCompatible,str,etree.Element],**kwargs)->t
     The attributes: breakOnReturncode,breakOnStderr (both True by default)
         can be used to control when to bail out.
 
-    :cmdTag: can be an lxml element, an xml string, or a Url of an object to download
+    :cmdTag: can be an lxml element, an xml string,
+        or a Url of an object to download
 
-    On simple example of using this is (note: doesn't handle fancy things like terminal controls, etc):
+    On simple example of using this is
+    (note: doesn't handle fancy things like terminal controls, etc):
         <head>
         <script>
             const commandApi="http://127.0.0.1:8101/command?cmdTag=";
@@ -101,7 +122,7 @@ def commandTag(cmdTag:typing.Union[URLCompatible,str,etree.Element],**kwargs)->t
     </html>
 
     Returns {id:OsRunResult}
-    """
+    """ # noqa: E501 # pylint: disable=line-too-long
     if not etree.iselement(cmdTag):
         if not isinstance(cmdTag,str):
             # NOTE: a string is always an xml string, not a URL (for security)
@@ -112,7 +133,7 @@ def commandTag(cmdTag:typing.Union[URLCompatible,str,etree.Element],**kwargs)->t
     replacements=dict(**kwargs)
     def getReplacement(s:str)->str:
         """
-        get a replacenemt for the named value in the results
+        get a replacement for the named value in the results
         this is more complicated than a mere dict lookup because
         replacements can be like "item.value.value"
 
@@ -124,19 +145,26 @@ def commandTag(cmdTag:typing.Union[URLCompatible,str,etree.Element],**kwargs)->t
         for i,step in enumerate(steps):
             if isinstance(ret,Iterable): # iterable, including strings!
                 try:
-                    ret=ret[int(step)]
-                except Exception:
-                    raise AttributeError('.'.join(steps[0:i]))
-            elif hasattr(ret,Mapping):
+                    foundIt=False
+                    for i,r in enumerate(ret):
+                        if i==int(step):
+                            ret=r
+                            foundIt=True
+                            break
+                    if not foundIt:
+                        raise AttributeError('.'.join(steps[0:i]))
+                except Exception as e:
+                    raise AttributeError('.'.join(steps[0:i])) from e
+            elif isinstance(ret,Mapping):
                 try:
                     ret=ret[step]
-                except Exception:
-                    raise AttributeError('.'.join(steps[0:i]))
+                except Exception as e:
+                    raise AttributeError('.'.join(steps[0:i])) from e
             else:
                 try:
                     ret=getattr(ret,step)
-                except Exception:
-                    raise AttributeError('.'.join(steps[0:i]))
+                except Exception as e:
+                    raise AttributeError('.'.join(steps[0:i])) from e
         return str(ret)
     def stringReplacement(s:str)->str:
         """
@@ -163,12 +191,16 @@ def commandTag(cmdTag:typing.Union[URLCompatible,str,etree.Element],**kwargs)->t
             processTag(child)
         if el.tag=='command':
             cmd:str=stringReplacement(el.attrib['cmd'])
-            id:str=el.attrib.get('id','')
+            id:str=el.attrib.get('id','') # pylint: disable=redefined-builtin
             result=osrun.run(cmd,shell=True)
-            if result.stderr and el.attrib.get('breakOnStderr','t')[0] in ('t','y','1'):
-                raise  CommandFailedOnStderrException(cmd,result.stderr)
-            if result.returncode!=0 and el.attrib.get('breakOnReturncode','t')[0] in ('t','y','1'):
-                raise  CommandFailedOnReturncodeException(cmd,result.returncode)
+            if result.stderr \
+                and el.attrib.get('breakOnStderr','t')[0] in ('t','y','1'):
+                raise CommandFailedOnStderrException(
+                    cmd,result.stderr)
+            if result.returncode!=0 \
+                and el.attrib.get('breakOnReturncode','t')[0] in ('t','y','1'):
+                raise CommandFailedOnReturncodeException(
+                    cmd,result.returncode)
             if id:
                 replacements[id]=result
                 results[id]=result
@@ -179,7 +211,8 @@ def runCommandServer(port:int=8101,**kwargs):
     """
     Starts up a command server on the given port
 
-    WARNING: this endpoint can be a HUGE security risk if outside parties gain access to it!
+    WARNING: this endpoint can be a HUGE security risk
+    if outside parties gain access to it!
 
     kwargs passed in will serve as the default args to all commands
     """
@@ -204,7 +237,7 @@ def runCommandServer(port:int=8101,**kwargs):
             """
             self.send_error(404,'File not found')
 
-        def do_GET(self):
+        def do_GET(self)->None:
             """
             called on HTTP GET
             """
@@ -220,19 +253,21 @@ def runCommandServer(port:int=8101,**kwargs):
                     if len(kv)<2:
                         kv.append('')
                     params[URL.urldecode(kv[0])]=URL.urldecode(kv[1])
-                print('command('+(','.join([f'{k}="{v}"' for k,v in params.items()]))+')')
+                print('command('+
+                      (','.join([f'{k}="{v}"' for k,v in params.items()]))+
+                      ')')
                 results={}
                 for k,v in commandTag(**params).items():
                     results[k]=v.jsonObj
                 jsonResults=json.dumps(results)
                 print(f'Results:\n{jsonResults}')
-                returnbytes=jsonResults.encode('utf-8')
+                returnBytes=jsonResults.encode('utf-8')
                 self.send_response(200)
                 self.send_header('Content-type','application/json')
                 self.send_header('Access-Control-Allow-Origin','*')
                 self.end_headers()
-                self.wfile.write(returnbytes)
-            except Exception as e:
+                self.wfile.write(returnBytes)
+            except Exception:
                 import io
                 import traceback
                 errors = io.StringIO()
@@ -241,7 +276,7 @@ def runCommandServer(port:int=8101,**kwargs):
 
     server_address=('127.0.0.1',int(port))
     server=HTTPServer(server_address,CommandHandler)
-    print(f'Starting command server on http://{server_address[0]}:{server_address[1]}/command?')
+    print(f'Starting command server on http://{server_address[0]}:{server_address[1]}/command?') # noqa: E501 # pylint: disable=line-too-long
     server.serve_forever(1)
 
 

@@ -19,7 +19,11 @@ class ErrorWindow(Frame):
     A window to display python exceptions
     """
 
-    def __init__(self,name:str,icon:str=None,master:Tk=None):
+    def __init__(self,
+        name:str,
+        icon:typing.Optional[str]=None,
+        master:typing.Optional[Tk]=None):
+        """ """
         if master is None:
             master=Tk()
             master.wm_title(name)
@@ -70,7 +74,7 @@ class ErrorWindow(Frame):
 
     def setOutputText(self,txt:str)->None:
         """
-        set the window text in its entirity
+        set the window text in its entirety
         """
         self.clearOutputText()
         self.appendOutputText(txt.strip())
@@ -79,12 +83,10 @@ class ErrorWindow(Frame):
         """
         get all of the text
         """
-        text=self.textControl.get(1.0,'end')
+        text:typing.Optional[str]=self.textControl.get(1.0,'end')
         if text is not None:
-            text=text.strip()
-        if text=="":
-            text=None
-        return text.strip()
+            return text.strip()
+        return ""
 
     def run(self)->bool:
         """
@@ -98,7 +100,10 @@ class ErrorWindow(Frame):
         return False
 
 
-def pyErrRun(cmd:str,shell:bool=False)->int:
+def pyErrRun(
+    cmd:typing.Union[str,typing.Iterable[str]],
+    shell:bool=False
+    )->int:
     """
     Run a command with a the PyErrRun object
     """
@@ -107,11 +112,14 @@ def pyErrRun(cmd:str,shell:bool=False)->int:
 
 class PyErrRun:
     """
-    class for running exdecutable files and capturing console errors
+    class for running executable files and capturing console errors
     """
 
     @staticmethod
-    def run(cmd:str,shell:bool=False)->int:
+    def run(
+        cmd:typing.Union[str,typing.Iterable[str]],
+        shell:bool=False
+        )->int:
         """
         Used with pythonw, you can run a python program without a terminal.
 
@@ -119,6 +127,7 @@ class PyErrRun:
             program output.
         """
         output_log=[]
+        has_stderr=False
         shared={"has_stderr":False}
         def onErr(txt:str):
             """
@@ -132,31 +141,35 @@ class PyErrRun:
             callback for stdout
             """
             output_log.append(txt)
-        isPythonScript=False
+        isPythonScript:typing.Union[str,bool]=False
         if isinstance(cmd,Iterable) and not isinstance(cmd,str):
-            executables=('pyhton','pythonw','python.exe','pythonw.exe')
+            executables=('python','pythonw','python.exe','pythonw.exe')
             extensions=('py','pyc','pyw')
+            cmd=list(cmd)
             while cmd[0].rsplit(os.sep,1)[-1] in executables:
                 cmd=cmd[1:]
             if not isPythonScript \
                 and cmd[0].rsplit('.',1)[-1] in extensions:
                 isPythonScript=cmd[0]
                 cmd=cmd[1:]
-            cmdStr=[]
+            cmdStrList=[]
             for c in cmd:
                 if c.find(' ')>=0:
-                    cmdStr.append('"'+c+'"')
+                    cmdStrList.append('"'+c+'"')
                 else:
-                    cmdStr.append(c)
-            cmdStr=' '.join(cmdStr)
+                    cmdStrList.append(c)
+            cmdStr=' '.join(cmdStrList)
             if not isPythonScript:
-                cmdStr='"'+isPythonScript+'" '+cmdStr
+                cmdStr=f'"{isPythonScript}" {cmdStr}'
         else:
             cmdStr=cmd
         try:
             if not isPythonScript:
                 returncode=runPythonFile(
-                    cmdStr,onOutputCB=onOut,onErrorCB=onErr,shell=shell)
+                    cmdStr,
+                    onOutputCB=onOut,
+                    onErrorCB=onErr,
+                    shell=shell)
                 returncode=0 # TODO: returncode seems to not be working?
                 output=''.join(output_log)
                 # I was originally doing it this way, but pythonw barfs when
@@ -169,7 +182,7 @@ class PyErrRun:
                 #returncode=p.returncode
             else:
                 has_stderr,output,returncode=\
-                    runPythonFile(isPythonScript,cmd)
+                    runPythonFile(cmd)
         except Exception:
             import sys
             exc_type,exc_value,exc_traceback=sys.exc_info()
@@ -178,7 +191,7 @@ class PyErrRun:
                 exc_type,exc_value,exc_traceback)
             output='\n'.join(exceptionStuff)
             returncode=-65535
-        title='ERR: '+cmdStr
+        title=f'ERR: {cmdStr}'
         outputStats=(returncode,has_stderr,len(output),output)
         output='[RETURNCODE=%s,HAS_STDERR=%s,OUTPUT_CHARS=%d]\n%s'%outputStats
         if (returncode is not None and returncode!=0) or has_stderr:
@@ -202,12 +215,12 @@ def cmdline(args:typing.Iterable[str]): # pylint: disable=function-redefined
 
     :param args: command line arguments (WITHOUT the filename)
     """
-    printhelp=False
+    printHelp=False
     if not args:
-        printhelp=True
+        printHelp=True
     else:
         pyErrRun(args)
-    if printhelp:
+    if printHelp:
         print('Usage:')
         print(('  '+PyErrRun.getLocation()+' program [parameters]'))
         return -1

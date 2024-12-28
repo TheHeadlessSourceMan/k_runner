@@ -57,6 +57,7 @@ confidence=
 disable=
         unrecognized-option,
         unknown-option-value,
+        no-name-in-module,
         superfluous-parens,
         disallowed-name,
         global-statement,
@@ -66,6 +67,7 @@ disable=
         unpacking-in-except,
         old-raise-syntax,
         backtick,
+        too-many-lines,
         long-suffix,
         old-ne-operator,
         old-octal-literal,
@@ -162,12 +164,13 @@ disable=
 		too-many-nested-blocks,
 		consider-using-f-string,
 		import-outside-toplevel,
+            c-extension-no-member,
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
 # multiple time (only on the command line, not in the configuration file where
 # it should appear only once). See also the "--disable" option for examples.
-enable=c-extension-no-member
+enable=
 
 
 [REPORTS]

@@ -28,7 +28,9 @@ class ErrIO:
             self.hasWritten=True
 
 
-def runPythonFile(script:str,args:typing.Iterable[str]=None):
+def runPythonFile(
+    script:typing.Union[str,typing.Iterable[str]],
+    args:typing.Optional[typing.Iterable[str]]=None):
     """
     runs a python script
 
@@ -45,18 +47,27 @@ def runPythonFile(script:str,args:typing.Iterable[str]=None):
     """
     import io
     import sys
+    if not isinstance(script,str):
+        script=list(script)
+        if len(script)>1:
+            if args is not None:
+                args=list(args)
+                args.extend(script[1:])
+            else:
+                args=script[1:]
+        script=script[0]
     script=os.path.abspath(script)
-    oldargs=sys.argv
-    oldpath=sys.path
-    oldstdout=sys.stdout
-    oldstderr=sys.stderr
+    oldArgs=sys.argv
+    oldPath=sys.path
+    oldStdout=sys.stdout
+    oldStderr=sys.stderr
     errStringBuffer=io.StringIO()
     returncode=0
     has_err=False
     errIo=ErrIO(errStringBuffer)
     sys.argv=[script]
     sys.path=[]
-    sys.path.extend(oldpath)
+    sys.path.extend(oldPath)
     scriptPath=script.rsplit(os.sep,1)[0]
     sys.path.append(scriptPath)
     _globals=dict(globals())
@@ -69,7 +80,7 @@ def runPythonFile(script:str,args:typing.Iterable[str]=None):
     try:
         sys.stderr=errIo
         sys.stdout=errStringBuffer
-        returncode=exec(
+        returncode=eval( # pylint: disable=eval-used
             compile(open(script, "rb").read(), script, 'exec'),
             _globals)
         #exec(compile(open(script,"rb").read(),script,'exec'),_globals)
@@ -80,10 +91,10 @@ def runPythonFile(script:str,args:typing.Iterable[str]=None):
             exc_type,exc_value,exc_traceback)))
     if errIo.hasWritten:
         has_err=True
-    sys.argv=oldargs
-    sys.path=oldpath
-    sys.stdout=oldstdout
-    sys.stderr=oldstderr
+    sys.argv=oldArgs
+    sys.path=oldPath
+    sys.stdout=oldStdout
+    sys.stderr=oldStderr
     return (has_err,errStringBuffer.getvalue(),returncode)
 
 
@@ -93,9 +104,10 @@ def cmdline(args:typing.Iterable[str]):
 
     :param args: command line arguments (WITHOUT the filename)
     """
-    printhelp=False
+    args=list(args)
+    printHelp=False
     if not args:
-        printhelp=True
+        printHelp=True
     else:
         print(' '.join(args))
         pythonFile=args[0]
@@ -107,7 +119,7 @@ def cmdline(args:typing.Iterable[str]):
         print('return code=',returncode)
         print('-----------------------')
         print(outputString)
-    if printhelp:
+    if printHelp:
         print('Usage:')
         print('  runPythonFile some_script.py [parameters]')
         return -1

@@ -15,7 +15,7 @@ class FilterRun:
         cmd:str,
         params:typing.Optional[typing.Iterable[str]]=None,
         shell:bool=False,
-        detatch:bool=False,
+        detach:bool=False,
         debug:bool=False,
         cmdLineSplit:typing.Optional[bool]=None):
         """
@@ -24,7 +24,7 @@ class FilterRun:
             if False will not
             if None (default) will only attempt if params[] is None
         """
-        self.osrun=OsRun(cmd,params,shell,detatch,debug,cmdLineSplit)
+        self.osrun=OsRun(cmd,params,shell,detach,debug,cmdLineSplit)
         self.filterOut:typing.List[typing.Pattern]=[]
 
     def addFilter(self,
@@ -51,19 +51,34 @@ class FilterRun:
                 return True
         return False
 
-    def runIter(self)->typing.Generator[str,None,None]:
+    def runIter(self,
+        moreParams:typing.Optional[typing.Iterable[str]]=None,
+        workingDirectory:typing.Optional[str]=None,
+        maxWait:typing.Optional[float]=None
+        )->typing.Generator[str,None,None]:
         """
-        run the program and yeild only lines that
+        run the program and yield only lines that
         """
-        for line in self.osrun:
+        for line in self.osrun(
+            moreParams,
+            workingDirectory,
+            maxWait):
+            #
             if not self.checkFilters(line,self.filterOut):
                 yield line
 
-    def __call__(self)->typing.Generator[str,None,None]:
+    def __call__(self,
+        moreParams:typing.Optional[typing.Iterable[str]]=None,
+        workingDirectory:typing.Optional[str]=None,
+        maxWait:typing.Optional[float]=None
+        )->typing.Generator[str,None,None]:
         """
-        run the program and yeild only lines that
+        run the program and yield only lines that
         """
-        return self.runIter()
+        return self.runIter(
+            moreParams,
+            workingDirectory,
+            maxWait)
 
     def __iter__(self)->typing.Iterator[str]:
         return self.runIter()
@@ -73,9 +88,9 @@ def cmdline(args:typing.Iterable[str])->int:
     """
     Call this module with command line arguments array
     """
-    printhelp=False
+    printHelp=False
     shell=False
-    detatch=False
+    detach=False
     maxWait=None
     useIter=True # whether to iterate on each line or dump them all at the end
     dashMode=False
@@ -93,17 +108,17 @@ def cmdline(args:typing.Iterable[str])->int:
             if av[0]=='-':
                 dashMode=True
             elif av[0]=='--help':
-                printhelp=True
+                printHelp=True
             elif av[0]=='--shell':
                 if len(av)<2:
                     shell=True
                 else:
                     shell=av[1][0].lower() in ('1','t','y')
-            elif av[0]=='--detatch':
+            elif av[0]=='--detach':
                 if len(av)<2:
-                    detatch=True
+                    detach=True
                 else:
-                    detatch=av[1][0].lower() in ('1','t','y')
+                    detach=av[1][0].lower() in ('1','t','y')
             elif av[0]=='--maxWait':
                 if len(av)<2:
                     maxWait=None
@@ -111,9 +126,9 @@ def cmdline(args:typing.Iterable[str])->int:
                     maxWait=float(av[1])
             else:
                 print('ERR: Unknown Argument "%s"'%arg)
-                printhelp=True
+                printHelp=True
         else:
-            osr=FilterRun(arg,shell=shell,detatch=detatch,debug=False)
+            osr=FilterRun(arg,shell=shell,detach=detach,debug=False)
             if useIter:
                 for line in osr:
                     print(line)
@@ -122,21 +137,21 @@ def cmdline(args:typing.Iterable[str])->int:
                 print(results)
     if dashMode:
         osr=FilterRun(
-            dashModeCmd,dashModeArgs,shell=shell,detatch=detatch,debug=False)
+            dashModeCmd,dashModeArgs,shell=shell,detach=detach,debug=False)
         if useIter:
             for line in osr:
                 print(line)
         else:
             results=osr(maxWait=maxWait)
             print(results)
-    if printhelp:
-        print('Useage:')
+    if printHelp:
+        print('Usage:')
         print('   filterRun.py [options] "[cmd params]" ...')
         print('Options:')
         print('   --help .......... show this help')
         print('   --shell ......... run with a shell environment')
-        print('   --wmaxWait=sec .. how long to wait for the program')
-        print('   --detatch ....... run detatched from this console')
+        print('   --maxWait=sec ... how long to wait for the program')
+        print('   --detach ........ run detached from this console')
         print('                (closing console will not close program)')
         print('   - ............... everything after this point is cmd+params')
         print('                (convenience to not have to quote everything)')
