@@ -15,7 +15,7 @@ import win32event # type: ignore
 import win32security # type: ignore
 #import msvcrt
 import win32api # type: ignore
-from .callbackDefs import ApplicationCallbacks
+from k_runner.callbackDefs import ApplicationCallbacks
 
 
 def getWindowsByPid(pid:int)->typing.Iterable[int]:
