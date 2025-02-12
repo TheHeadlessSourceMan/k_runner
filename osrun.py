@@ -615,7 +615,11 @@ class OsRunJob:
         previousDirectory=None
         if workingDirectory:
             previousDirectory=os.getcwd()
-            os.chdir(workingDirectory)
+            try:
+                os.chdir(workingDirectory)
+            except Exception as e:
+                msg=f'Unable to access "{workingDirectory}"'
+                raise FileNotFoundError(msg) from e
         if self.osRun.priority!=MEDIUM_PRIORITY:
             if os.name=='nt':
                 # of the form:
