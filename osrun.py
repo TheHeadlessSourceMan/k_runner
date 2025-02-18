@@ -5,6 +5,7 @@ import typing
 from collections.abc import Iterable
 import os
 import sys
+from pathlib import Path
 import subprocess
 import time
 from threading import Thread
@@ -490,8 +491,10 @@ class OsRunJob:
         self._errThread:typing.Optional[Thread]=None
         self._popen:typing.Optional[subprocess.Popen]=None
         self._lastReturncode:int=-9999
-        self.workingDirectory:typing.Optional[str]=\
-            osRun.workingDirectory # keep a copy in case they change it
+        self.workingDirectory:typing.Optional[Path]=None
+        if osRun.workingDirectory is not None:
+            # keep a copy in case they change it
+            self.workingDirectory=Path(osRun.workingDirectory)
         self.osRun=osRun
 
     def addCallOnStdoutLine(self,
@@ -574,8 +577,9 @@ class OsRunJob:
             self._popen.stdin.flush()
     print=writeln
 
-    def start(self,moreParams:typing.Optional[typing.Iterable[str]]=None,
-        workingDirectory:typing.Optional[str]=None)->None:
+    def start(self,
+        moreParams:typing.Optional[typing.Iterable[str]]=None,
+        workingDirectory:typing.Union[None,str,Path]=None)->None:
         """
         start the thing running
 
@@ -602,7 +606,12 @@ class OsRunJob:
                 self.outerrBuf.callOnLine.append(self.debugLog) #register it
         # build up the command to be run
         if workingDirectory is None:
-            workingDirectory=self.workingDirectory
+            if self.workingDirectory is None:
+                workingDirectory=Path(os.getcwd()).absolute()
+            else:
+                workingDirectory=self.workingDirectory
+        else:
+            workingDirectory=Path(workingDirectory).absolute()
         cmd:typing.List[str]=[self.osRun.cmd]
         cmd.extend(self.osRun.params)
         if moreParams is not None:
@@ -616,7 +625,7 @@ class OsRunJob:
         if workingDirectory:
             previousDirectory=os.getcwd()
             try:
-                os.chdir(workingDirectory)
+                os.chdir(str(workingDirectory))
             except Exception as e:
                 msg=f'Unable to access "{workingDirectory}"'
                 raise FileNotFoundError(msg) from e
@@ -627,14 +636,13 @@ class OsRunJob:
                 # see also:
                 # https://www.tenforums.com/tutorials/89548-set-cpu-process-priority-applications-windows-10-a.html
                 if workingDirectory is None:
-                    cmdPath=os.path.abspath(cmd[0])
+                    cmdPath=Path(cmd[0]).absolute()
                 else:
-                    cmdPath=os.path.abspath(
-                        os.sep.join((workingDirectory,cmd[0])))
-                if not os.path.isfile(cmdPath):
-                    cmdPath=cmd[0]
+                    cmdPath=workingDirectory/cmd[0]
+                if not cmdPath.is_file():
+                    cmdPath=Path(cmd[0])
                 winPri=_getWindowsPriorityName(self.osRun.priority)
-                newCmd=['start','',f'/{winPri}',cmdPath]
+                newCmd=['start','',f'/{winPri}',str(cmdPath)]
                 if len(cmd)>1:
                     newCmd.extend(cmd[1:])
                 cmd=newCmd
@@ -660,7 +668,7 @@ class OsRunJob:
                 stdout=subprocess.PIPE,stderr=subprocess.PIPE,
                 stdin=subprocess.PIPE,
                 creationflags=creationflags,
-                cwd=workingDirectory,env=self.osRun.env)
+                cwd=str(workingDirectory),env=self.osRun.env)
         except Exception as e:
             raise OsRunException(cmd,e) from e
         if previousDirectory is not None:
@@ -836,7 +844,7 @@ class OsRun:
         detach:bool=False,
         debug:bool=False,
         cmdLineSplit:typing.Optional[bool]=None,
-        workingDirectory:typing.Optional[str]=None,
+        workingDirectory:typing.Union[None,str,Path]=None,
         env:typing.Optional[typing.Dict[str,typing.Any]]=None,
         callOnStdoutLine:typing.Optional[StringNotifies]=None,
         callOnStderrLine:typing.Optional[StringNotifies]=None,
@@ -879,7 +887,9 @@ class OsRun:
         self.shell:bool=shell # run in the system shell environment (slower and usually unnecessary) # noqa: E501 # pylint: disable=line-too-long
         self.detach:bool=detach # detach from this process/run in background
         self.debug:bool=debug # print the command input and output for debugging # noqa: E501 # pylint: disable=line-too-long
-        self.workingDirectory:typing.Optional[str]=workingDirectory
+        self.workingDirectory:typing.Optional[Path]=None
+        if workingDirectory is not None:
+            self.workingDirectory=Path(workingDirectory).absolute()
         if env is None:
             env=dict(os.environ)
         self.env:typing.Dict[str,typing.Any]=env
@@ -971,7 +981,7 @@ class OsRun:
         if self.debug:
             ret['debug']=self.debug
         if self.workingDirectory is not None and self.workingDirectory:
-            ret['workingDirectory']=self.workingDirectory
+            ret['workingDirectory']=str(self.workingDirectory)
         return ret
     @jsonObj.setter
     def jsonObj(self,jsonObj:typing.Dict[str,typing.Any]):
@@ -980,7 +990,7 @@ class OsRun:
         self.shell=jsonObj.get('shell',False)
         self.detach=jsonObj.get('detach',False)
         self.debug=jsonObj.get('debug',False)
-        self.workingDirectory=jsonObj.get('workingDirectory',None)
+        self.workingDirectory=Path(jsonObj.get('workingDirectory',None))
 
     def load(self,filename:str)->None:
         """
@@ -1004,7 +1014,7 @@ class OsRun:
 
     def __call__(self,
         moreParams:typing.Optional[typing.Iterable[str]]=None,
-        workingDirectory:typing.Optional[str]=None,
+        workingDirectory:typing.Union[None,str,Path]=None,
         maxWait:typing.Optional[float]=None
         )->OsRunResult:
         """
@@ -1016,7 +1026,7 @@ class OsRun:
 
     def run(self,
         moreParams:typing.Optional[typing.Iterable[str]]=None,
-        workingDirectory:typing.Optional[str]=None,
+        workingDirectory:typing.Union[None,str,Path]=None,
         maxWait:typing.Optional[float]=None,
         callOnStdoutLine:typing.Optional[StringNotifies]=None,
         callOnStderrLine:typing.Optional[StringNotifies]=None,
@@ -1051,7 +1061,7 @@ class OsRun:
 
     def poe(self,
         moreParams:typing.Optional[typing.Iterable[str]]=None,
-        workingDirectory:typing.Optional[str]=None,
+        workingDirectory:typing.Union[None,str,Path]=None,
         maxWait:typing.Optional[float]=None
         )->OsRunResult:
         """
@@ -1073,7 +1083,7 @@ class OsRun:
 
     def runAsync(self,
         moreParams:typing.Optional[typing.Iterable[str]]=None,
-        workingDirectory:typing.Optional[str]=None,
+        workingDirectory:typing.Union[None,str,Path]=None,
         callOnStdoutLine:typing.Optional[StringNotifies]=None,
         callOnStderrLine:typing.Optional[StringNotifies]=None,
         callOnStdoutErrLine:typing.Optional[StringNotifies]=None,
@@ -1106,7 +1116,7 @@ class OsRun:
 
     def runIterAllOutput(self,
         moreParams:typing.Optional[typing.Iterable[str]]=None,
-        workingDirectory:typing.Optional[str]=None
+        workingDirectory:typing.Union[None,str,Path]=None
         )->typing.Generator[str,None,None]:
         """
         The idea is you run the command and get the lines back
@@ -1127,7 +1137,7 @@ class OsRun:
 
     def runIterStdout(self,
         moreParams:typing.Optional[typing.Iterable[str]]=None,
-        workingDirectory:typing.Optional[str]=None
+        workingDirectory:typing.Union[None,str,Path]=None
         )->typing.Generator[str,None,None]:
         """
         The idea is you run the command and get the stdout lines
@@ -1145,7 +1155,7 @@ class OsRun:
 
     def runIterStderr(self,
         moreParams:typing.Optional[typing.Iterable[str]]=None,
-        workingDirectory:typing.Optional[str]=None
+        workingDirectory:typing.Union[None,str,Path]=None
         )->typing.Generator[str,None,None]:
         """
         The idea is you run the command and get the stderr
@@ -1175,7 +1185,7 @@ def osrun(
     detach:bool=False,
     debug:bool=False,
     cmdLineSplit:typing.Optional[bool]=None,
-    workingDirectory:typing.Optional[str]=None,
+    workingDirectory:typing.Union[None,str,Path]=None,
     env:typing.Optional[typing.Dict[str,typing.Any]]=None,
     callOnStdoutLine:typing.Optional[StringNotifies]=None,
     callOnStderrLine:typing.Optional[StringNotifies]=None,
