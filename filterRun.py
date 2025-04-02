@@ -28,13 +28,14 @@ class FilterRun:
         self.filterOut:typing.List[typing.Pattern]=[]
 
     def addFilter(self,
-        flt:typing.Union[str,typing.Pattern]
+        flt:typing.Union[str,typing.Pattern],
+        compileFlags:int=0
         )->None:
         """
         add another filter to the list of filters
         """
         if isinstance(flt,str):
-            flt=re.compile(flt)
+            flt=re.compile(flt,compileFlags)
         self.filterOut.append(flt)
 
     def checkFilters(self,
