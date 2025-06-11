@@ -10,6 +10,7 @@ import subprocess
 import time
 from threading import Thread
 import json
+from stringTools import ansiColorToHtml, stripANSI
 
 StringNotify=typing.Callable[[str],None]
 StringNotifies=typing.Union[StringNotify,typing.Iterable[StringNotify]]
@@ -353,11 +354,18 @@ class OsRunBuf:
 
     def __init__(self,
         callOnChar:typing.Optional[StringNotifies]=None,
-        callOnLine:typing.Optional[StringNotifies]=None):
-        """ """
+        callOnLine:typing.Optional[StringNotifies]=None,
+        ansiHandling:str="strip"
+        ):
+        """
+        :param ansiHandling: how to handle ansi escape codes
+            "strip"(default), "preserve", or "html"
+        """
+        self.ansiHandling=ansiHandling
         self.done:bool=False
-        self._line:typing.List[bytes]=[]
-        self._lines:typing.List[bytes]=[]
+        self._ansiStateMachine:int=0
+        self._line:bytearray=bytearray()
+        self._lines:typing.List[bytes]=[] # that's a list of groups of bytes
         self.callOnChar:StringNotifyList=[]
         self.callOnLine:StringNotifyList=[]
         self.addCallOnLine(callOnLine)
@@ -380,7 +388,7 @@ class OsRunBuf:
         """
         Clear this buffer
         """
-        self._line=[]
+        self._line=bytearray()
         self._lines=[]
 
     def append(self,data:bytes)->None:
@@ -396,16 +404,40 @@ class OsRunBuf:
                 q=bytes(b).decode(self.encoding,'ignore')
                 for c in self.callOnChar:
                     c(q)
-            if b==10: # aka '\n'
-                line=b''.join(self._line)
-                self._lines.append(line)
-                self._line.clear()
-                if self.callOnLine:
-                    q=line.decode(self.encoding,'ignore')
-                    for c in self.callOnLine:
-                        c(q)
+            if self._ansiStateMachine==27:
+                self._line.append(b)
+                if b==b'[':
+                    self._ansiStateMachine=b
+                else:
+                    self._ansiStateMachine=0
+            elif self._ansiStateMachine==b'[':
+                self._line.append(b)
+                if b==b'm':
+                    self._ansiStateMachine=0
             else:
-                self._line.append(data)
+                if b==27: # escape starts ansi sequence
+                    self._line.append(b) # we keep the escape codes!
+                    self._ansiStateMachine=27
+                elif b==10: # aka '\n'
+                    self._lines.append(self._line)
+                    if self.callOnLine:
+                        line=self._interpret(self._line)
+                        for c in self.callOnLine:
+                            c(line)
+                    self._line.clear()
+                else:
+                    self._line.append(b)
+
+    def _interpret(self,data:bytes)->str:
+        """
+        Interpret a sequence of bytes as a string,
+        according to how we want to handle ansi escape codes
+        """
+        if self.ansiHandling=='strip':
+            return stripANSI(data)
+        if self.ansiHandling=='html':
+            return ansiColorToHtml(data)
+        return data.decode('utf-8',errors='ignore')
 
     def lineIter(self)->typing.Generator[str,None,None]:
         """
@@ -433,9 +465,10 @@ class OsRunBuf:
         Convert this buffer to a string
         """
         if self._line:
-            self._lines.append(b''.join(self._line))
+            self._lines.append(self._line)
             self._line.clear()
-        return b'\n'.join(self._lines).strip().decode(self.encoding,'ignore')
+        return self._interpret(
+            b'\n'.join([line for line in self._lines]).strip())
     def __repr__(self)->str:
         return self.toString()
 
@@ -852,7 +885,8 @@ class OsRun:
         callOnStdoutChar:typing.Optional[StringNotifies]=None,
         callOnStderrChar:typing.Optional[StringNotifies]=None,
         callOnStdoutErrChar:typing.Optional[StringNotifies]=None,
-        priority:int=MEDIUM_PRIORITY
+        priority:int=MEDIUM_PRIORITY,
+        ansiHandling:str="strip"
         ):
         """
         :param workingDirectory: perform the operation in a specific directory
@@ -861,7 +895,10 @@ class OsRun:
             if True will always attempt to split cmd into params
             if False will not
             if None (default) will only attempt if params[] is None
+        :param ansiHandling: how to handle ansi escape codes
+            "strip"(default), "preserve", or "html"
         """
+        self.ansiHandling=ansiHandling
         useParams:typing.List[str]=[]
         if cmd is not None \
             and isinstance(cmd,Iterable) \
