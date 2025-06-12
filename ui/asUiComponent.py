@@ -1,0 +1,46 @@
+"""
+Convert anything to a ui window
+"""
+import typing
+if typing.TYPE_CHECKING:
+    from k_runner.processes import ProcessCompatible
+    from .component import UiComponent
+
+
+class ClassWithhwnd(typing.Protocol):
+    """
+    Any class that contains a compatible hWnd member
+    """
+    hwnd:int
+class ClassWithhWnd(typing.Protocol):
+    """
+    Any class that contains a compatible hWnd member
+    """
+    hWnd:int
+
+
+UiComponentCompatible=typing.Union[int,
+    "UiComponent",ClassWithhwnd,ClassWithhWnd,"ProcessCompatible"]
+UIComponentCompatible=UiComponentCompatible
+
+def asUiComponent(comp:UIComponentCompatible)->"UiComponent":
+    """
+    Always return a Process
+    """
+    from .component import UiComponent
+    if not isinstance(comp,UiComponent):
+        if isinstance(comp,int):
+            comp=UiComponent(comp)
+        elif hasattr(comp,'hwnd'):
+            comp=asUiComponent(comp.hwnd)
+        elif hasattr(comp,'hWnd'):
+            comp=asUiComponent(comp.hWnd)
+        else:
+            from .find import pidToHwnd
+            comp=UiComponent(pidToHwnd(comp))
+    return comp
+asComponent=asUiComponent
+asUiControl=asUiComponent
+asControl=asUiComponent
+asUIComponent=asUiComponent
+asUIControl=asUiComponent

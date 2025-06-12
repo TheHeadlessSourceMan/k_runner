@@ -60,7 +60,7 @@ class _DesktopManager:
             createIfMissing,
             deleteCreatedOnExit)
 
-    def __call__(self)->"DesktopManager":
+    def __call__(self)->"_DesktopManager":
         return self
 
     def __del__(self):
@@ -72,7 +72,7 @@ desktops=DesktopManager
 Desktops=desktops
 
 
-class Desktop:
+class UiDesktop:
     """
     This either references a virtual desktop or creates
     a new one.
@@ -169,6 +169,9 @@ class Desktop:
         DeleteDC(wndDc)
         SelectObject(memDc,oldBmp)
         DeleteDC(memDc)
+UIDesktop=UiDesktop
+VirtualDesktop=UiDesktop
+Desktop=UiDesktop
 
 
 def cmdline(args:typing.Iterable[str]):
