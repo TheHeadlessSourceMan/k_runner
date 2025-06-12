@@ -14,29 +14,123 @@ from win32gui import ( # type: ignore
     GetWindowDC,
     GetWindowRect,
     SelectObject)
+from win32service import (
+    CreateDesktop,OpenDesktop,PyHDESK,
+    GetProcessWindowStation,PyHWINSTA)
+
+
+class _DesktopManager:
+    """
+    Manage virtual desktops
+    """
+    _hwndsta:PyHWINSTA=GetProcessWindowStation()
+
+    @property
+    def desktopNames(self)->typing.Iterable[str]:
+        """
+        List all of the desktop names
+        """
+        return self._hwndsta.EnumDesktops()
+
+    def create(self,
+        desktopName:str,
+        deleteCreatedOnExit:bool=True
+        )->"Desktop":
+        """
+        Create a desktop
+        """
+        return Desktop(
+            desktopName,
+            True,
+            True,
+            deleteCreatedOnExit)
+
+    def getDesktop(self,
+        desktopName:str,
+        alwaysCreateNew:bool=False,
+        createIfMissing:bool=True,
+        deleteCreatedOnExit:bool=True
+        )->"Desktop":
+        """
+        Get a desktop
+        """
+        return Desktop(
+            desktopName,
+            alwaysCreateNew,
+            createIfMissing,
+            deleteCreatedOnExit)
+
+    def __call__(self)->"DesktopManager":
+        return self
+
+    def __del__(self):
+        self._hwndsta.Detach()
+
+DesktopManager=_DesktopManager()
+desktopManager=DesktopManager
+desktops=DesktopManager
+Desktops=desktops
 
 
 class Desktop:
     """
-    This program creates a detached desktop that can be used as a canvas for
-    remote rendering.
+    This either references a virtual desktop or creates
+    a new one.
+
+    See also:
+        https://msdn.microsoft.com/en-us/library/windows/desktop/ms682127(v=vs.85).aspx
     """
 
-    def __init__(self):
-        self.hDesktop=None
+    def __init__(self,
+        desktopName:str,
+        alwaysCreateNew:bool=False,
+        createIfMissing:bool=True,
+        deleteCreatedOnExit:bool=True):
+        """ """
+        self._pyHDesk:typing.Optional[PyHDESK]=None
+        self.deleteOnExit:bool=False
+        if alwaysCreateNew:
+            self._pyHDesk=CreateDesktop(desktopName)
+            self.deleteOnExit=deleteCreatedOnExit
+        else:
+            self._pyHDesk=OpenDesktop(desktopName)
+            if not self._pyHDesk and createIfMissing:
+                self._pyHDesk=CreateDesktop(desktopName)
+                self.deleteOnExit=deleteCreatedOnExit
+        self.desktopName:str=desktopName
+
+    @property
+    def hDesktop(self)->int:
+        """
+        Handle to the desktop
+        """
+        return self._pyHDesk.handle
+
+    @property
+    def hWnd(self)->int:
+        """
+        Handle to the desktop window
+        """
+        return self._pyHDesk.handle
+
+    @property
+    def name(self)->str:
+        """
+        The name of the desktop
+        """
+        return self.desktopName
+
+    def switchTo(self):
+        """
+        Make this the currently-selected desktop
+        """
+        self._pyHDesk.SwitchDesktop(self.hDesktop)
 
     @property
     def hwnd(self):
         """
         get the window handle of this desktop
         """
-
-    def _create(self):
-        """
-        See also:
-            https://msdn.microsoft.com/en-us/library/windows/desktop/ms682127(v=vs.85).aspx
-        """
-        #TODO: see api, CreateDesktop
 
     def close(self):
         """
@@ -45,9 +139,12 @@ class Desktop:
         (will be closed when object goes out of scope as well,
         so you can simply do myDesktopVariable=None instead)
         """
-        if self.hDesktop is not None:
-            CloseDesktop(self.hDesktop)
-            self.hDesktop=None
+        if self._pyHDesk is not None:
+            if self.deleteOnExit:
+                self._pyHDesk.CloseDesktop()
+            else:
+                self._pyHDesk.Detach()
+            self._pyHDesk=None
 
     def __del__(self):
         self.close()
