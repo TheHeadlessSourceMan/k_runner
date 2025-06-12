@@ -30,7 +30,11 @@ class ErrIO:
 
 def runPythonFile(
     script:typing.Union[str,typing.Iterable[str]],
-    args:typing.Optional[typing.Iterable[str]]=None):
+    args:typing.Optional[typing.Iterable[str]]=None,
+    onOutputCB:typing.Optional[typing.Callable]=None,
+    onErrorCB:typing.Optional[typing.Callable]=None,
+    shell:bool=False
+    )->int:
     """
     runs a python script
 
@@ -81,7 +85,7 @@ def runPythonFile(
         sys.stderr=errIo
         sys.stdout=errStringBuffer
         returncode=eval( # pylint: disable=eval-used
-            compile(open(script, "rb").read(), script, 'exec'),
+            compile(open(script, "rb").read(),script,'exec'),
             _globals)
         #exec(compile(open(script,"rb").read(),script,'exec'),_globals)
     except Exception:

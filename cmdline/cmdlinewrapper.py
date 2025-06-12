@@ -3,6 +3,8 @@
 This is helper for creating function calls that run command line
 programs
 """
+import typing
+from paths import asUrl,UrlCompatible
 from .helpfiles import HelpSystemEntry
 
 
@@ -13,8 +15,10 @@ class CmdLineWrapper(HelpSystemEntry):
     def __init__(self,app=None):
         HelpSystemEntry.__init__(self,app)
 
-    def createPythonWrapper(self,createMainFunction=False):
+    def createPythonWrapperCode(self,createMainFunction:bool=False)->str:
         """
+        Create python code (in a string) that wraps the command line call
+
         :createMainFunction: Generally, creating a command line
             app to call a command line app is
             rather pointless.  Still, can be handy for testing.
@@ -109,44 +113,34 @@ class CmdLineWrapper(HelpSystemEntry):
             code.append('\telse:')
             code.append('\t\tprint out')
         return '\n'.join(code)
+    createPythonWrapper=createPythonWrapperCode
 
-    def savePythonWrapper(self,filename,createMainFunction=False):
+    def savePythonWrapper(self,
+        filename:UrlCompatible,
+        createMainFunction:bool=False
+        )->bool:
         """
         Create a python wrapper for the command line application
         and save it to file
         """
+        filename=asUrl(filename)
         data=self.createPythonWrapper(createMainFunction=createMainFunction)
         if data:
-            try:
-                f=open(filename,'w')
-                f.write(data)
-                f.close()
-                return True
-            except Exception:
-                print('ERR: Unable to open \"'+filename+'\" for writing.')
-                return False
+            filename.write(data)
+            return True
         print('ERR: No data found.  File not saved.')
         return False
 
 
-if __name__ == '__main__':
+def main(args:typing.Iterable[str])->int:
     """
     This generates a command line wrapper... from the command line.
     """
-    import sys
-    # Use the Psyco python accelerator if available
-    # See:
-    #     http://psyco.sourceforge.net
-    try:
-        import psyco
-        psyco.full() # accelerate this program
-    except ImportError:
-        pass
     printhelp=False
     cmd=None
     infoFrom=[]
     out=[]
-    for arg in sys.argv[1:]:
+    for arg in args:
         if cmd is None:
             if arg[0]=='-':
                 if arg[1]=='-':
@@ -192,13 +186,19 @@ if __name__ == '__main__':
         print('\t\tcmdlinewrapper.py --out=.py ls ls.html')
         print('\t... same goes for text files:')
         print('\t\tcmdlinewrapper.py --out=.py ls README.txt')
-    else:
-        wrapper=CmdLineWrapper(cmd)
-        wrapper.getCommandLineOptions(' '.join(infoFrom))
-        for o in out:
-            extn=o.rsplit('.',1)
-            if extn[-1]=='py':
-                if len(extn)<2 or extn[0]=='' or extn[0]=='-':
-                    print(wrapper.createPythonWrapper(createMainFunction=True))
-                else:
-                    wrapper.savePythonWrapper(o,createMainFunction=True)
+        return -1
+    wrapper=CmdLineWrapper(cmd)
+    wrapper.getCommandLineOptions(' '.join(infoFrom))
+    for o in out:
+        extn=o.rsplit('.',1)
+        if extn[-1]=='py':
+            if len(extn)<2 or extn[0]=='' or extn[0]=='-':
+                print(wrapper.createPythonWrapper(createMainFunction=True))
+            else:
+                wrapper.savePythonWrapper(o,createMainFunction=True)
+    return 0
+
+
+if __name__ == '__main__':
+    import sys
+    sys.exit(main(sys.argv[1:]))

@@ -3,6 +3,7 @@ resources for controlling the ui
 """
 import typing
 import re
+import time
 try:
     import win32gui
     import win32con
@@ -17,9 +18,10 @@ except ImportError:
 # https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes?redirectedfrom=MSDN
 # automating excel and stuff https://pbpython.com/windows-com.html
 # controlling explorer windows
-#      https://stackoverflow.com/questions/43949747/return-a-list-of-all-files-from-the-selected-explorer-window-with-pywin32
-#      https://stackoverflow.com/questions/21241708/python-get-a-list-of-selected-files-in-explorer-windows-7/21250927#21250927
-# hooking into wscript (and controlling windows) https://win32com.goermezer.de/microsoft/windows/controlling-applications-via-sendkeys.html
+# https://stackoverflow.com/questions/43949747/return-a-list-of-all-files-from-the-selected-explorer-window-with-pywin32
+# https://stackoverflow.com/questions/21241708/python-get-a-list-of-selected-files-in-explorer-windows-7/21250927#21250927
+# hooking into wscript (and controlling windows)
+# https://win32com.goermezer.de/microsoft/windows/controlling-applications-via-sendkeys.html
 
 
 class UiItemGroup:
@@ -59,7 +61,7 @@ class UiItemGroup:
             for c in self.findChildren():
                 self._children.append(c)
                 self._childrenLookup[c.title]=c
-        return self._children 
+        return self._children
     @property
     def childrenLookup(self)->typing.Dict[str,"UiItem"]:
         """
@@ -166,6 +168,7 @@ class UiItem(UiItemGroup):
             matching=re.compile(matching,re.DOTALL)
         children=[]
         def winEnumHandler(hwnd,ctx):
+            _=ctx
             if win32gui.GetParent(hwnd)==self.hwnd:
                 if matching is None or matching.match(self.title):
                     children.append(UiItem(hwnd))
@@ -174,7 +177,9 @@ class UiItem(UiItemGroup):
         for c in children:
             yield c
 
-    def click(self,button:str='left',count:int=1,
+    def click(self,
+        button:str='left',
+        count:int=1,
         position:typing.Optional[typing.Tuple[int,int]]=None):
         """
         click on it
@@ -188,12 +193,34 @@ class UiItem(UiItemGroup):
         win32gui.ShowWindow(self.hwnd,win32con.SW_RESTORE)
         #clientPosition=win32gui.ClientToScreen(self.win_handle,position)
         #position=self.__calculate_absolute_coordinates__(clientPosition)
-        #win32api.mouse_event(win32con.MOUSEEVENTF_MOVE|win32con.MOUSEEVENTF_ABSOLUTE,position[0],position[1],0,0)
-        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN,position[0],position[1],0,0)
-        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP,position[0],position[1],0,0)
-        #time.sleep(0.05)
+        #win32api.mouse_event(
+        # win32con.MOUSEEVENTF_MOVE|win32con.MOUSEEVENTF_ABSOLUTE,
+        # position[0],position[1],0,0)
+        for _ in range(count):
+            if button=='right':
+                win32api.mouse_event(
+                    win32con.MOUSEEVENTF_RIGHTDOWN,
+                    position[0],position[1],0,0)
+                win32api.mouse_event(
+                    win32con.MOUSEEVENTF_RIGHTUP,
+                    *position[0],position[1],0,0)
+            elif button=='middle':
+                win32api.mouse_event(
+                    win32con.MOUSEEVENTF_MIDDLEDOWN,
+                    position[0],position[1],0,0)
+                win32api.mouse_event(
+                    win32con.MOUSEEVENTF_MIDDLEUP,
+                    position[0],position[1],0,0)
+            else:
+                win32api.mouse_event(
+                    win32con.MOUSEEVENTF_LEFTDOWN,
+                    position[0],position[1],0,0)
+                win32api.mouse_event(
+                    win32con.MOUSEEVENTF_LEFTUP,
+                    position[0],position[1],0,0)
+            time.sleep(0.05)
         win32api.SetCursorPos(oldPosition)
-        win32gui.SetActiveWindow(oldWindow) 
+        win32gui.SetActiveWindow(oldWindow)
 
     def sendKeys(self,keycodes:str):
         r"""
@@ -202,12 +229,16 @@ class UiItem(UiItemGroup):
         supports stuff like [ctrl][enter][esc]... as well as characters
             (Delimiter for protected values is "\")
 
-        TODO: 
+        TODO:
             win32con.VK_NEXT
         """
         raise NotImplementedError()
         #for c in keycodes:
-            #win32api.SendMessage(self.hwnd,win32con.WM_CHAR,VkKeyScan(c),0) # used to use ord() but switched to VkKeyScan()
+            #win32api.SendMessage(
+            # self.hwnd,
+            # win32con.WM_CHAR,
+            # VkKeyScan(c),
+            # 0) # used to use ord() but switched to VkKeyScan()
             #win32gui.SendMessage(self.hwnd,win32con.WM_KEYDOWN,c,0)
             #win32gui.SendMessage(self.hwnd,win32con.WM_KEYUP,c,0)
 
