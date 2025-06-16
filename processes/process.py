@@ -194,6 +194,86 @@ class Process(psutil.Process):
     bringToFront=makeForeground
     makeWindowForeground=makeForeground
 
+    def setMinimized(self,minimize:bool=True)->None:
+        """
+        Minimize all windows
+        """
+        for w in self.windows:
+            w.minimize(minimize)
+    minimize=setMinimized
+
+    def setMaximized(self,maximize:bool=True)->None:
+        """
+        Maximize all windows
+        """
+        for w in self.windows:
+            w.setMaximized(maximize)
+    maximize=setMaximized
+
+    def restore(self)->None:
+        """
+        Restore all windows
+        """
+        for w in self.windows:
+            w.restore()
+
+    def priorityToNice(self,priority:float)->int:
+        """
+        Change a priority percent into something
+        that the nice command understands.
+        """
+        niceVal=max(min(priority,1.0),0)
+        niceVal=20-40*niceVal
+        return int(niceVal)
+
+    def niceToPriority(self,nice:float)->float:
+        """
+        Change a nice command value
+        into a priority percent
+        """
+        return (nice-20)/-40
+
+    def setPriority(self,priority:float)->None:
+        """
+        Set the process priority as a percent
+        where 1.0 is the max priority of 100%
+        """
+        self.nice(self.priorityToNice(priority))
+
+    def getPriority(self)->float:
+        """
+        Get the process priority as a percent
+        where 1.0 is the max priority of 100%
+        """
+        return self.niceToPriority(self.nice())
+
+    @property
+    def priority(self)->float:
+        """
+        Get/set the process priority as a percent
+        where 1.0 is the max priority of 100%
+        """
+        return self.getPriority()
+    @priority.setter
+    def priority(self,priority:float):
+        """
+        Get/set the process priority as a percent
+        where 1.0 is the max priority of 100%
+        """
+        return self.setPriority(priority)
+
+    def increasePriority(self,byAmount:float=0.475)->None:
+        """
+        Increase the process priority percent
+        """
+        self.setPriority(self.getPriority()+byAmount)
+
+    def decreasePriority(self,byAmount:float=0.475)->None:
+        """
+        Decrease the process priority percent
+        """
+        self.increasePriority(-byAmount)
+
     def getHwnds(self,visibleOnly:bool=True)->typing.Iterable[int]:
         """
         Get the window handles associated with the process
@@ -216,16 +296,6 @@ class Process(psutil.Process):
         for hwnd in self.hwnds:
             return hwnd
         return None
-
-    @property
-    def priority(self)->int:
-        """
-        Get/set the process priority
-        """
-        raise NotImplementedError()
-    @priority.setter
-    def priority(self,priority:int):
-        raise NotImplementedError()
 
     def __eq__(self,
         other:typing.Union[str,ProcessCompatible]

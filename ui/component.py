@@ -269,32 +269,80 @@ class UiComponent(UiComponentGroup):
                 c=r'%'+c
             shell.SendKeys(c,0)
 
-    def minimize(self,setMin:bool=True)->bool:
+    def setMinimized(self,minimize:bool=True)->None:
         """
-        returns the original value
+        Minimize the window
         """
         if os.name=='nt':
-            old=win32process.GetStartupInfo().wShowWindow|win32con.SW_MINIMIZE
-            if old!=setMin:
-                if setMin:
-                    win32gui.ShowWindow(self.hWnd,win32con.SW_MINIMIZE)
-                else:
-                    win32gui.ShowWindow(self.hWnd,win32con.SW_RESTORE)
+            if minimize:
+                win32gui.ShowWindow(self.hWnd,win32con.SW_MINIMIZE)
+            else:
+                win32gui.ShowWindow(self.hWnd,win32con.SW_RESTORE)
         else:
             raise NotImplementedError()
-        return old
+    minimize=setMinimized
 
-    def maximize(self)->None:
+    def setMaximized(self,maximize:bool=True)->None:
         """
         Maximize this window
         """
-        win32gui.ShowWindow(self.hwnd,win32con.SW_MAXIMIZE)
+        if os.name=='nt':
+            if maximize:
+                win32gui.ShowWindow(self.hWnd,win32con.SW_MAXIMIZE)
+            else:
+                win32gui.ShowWindow(self.hWnd,win32con.SW_RESTORE)
+        else:
+            raise NotImplementedError()
+    maximize=setMaximized
+
+    @property
+    def minimized(self)->bool:
+        """
+        Get/set the minimized state of the window
+        """
+        if os.name=='nt':
+            startupInfo=win32process.GetStartupInfo()
+            return startupInfo.wShowWindow|win32con.SW_MINIMIZE
+        else:
+            raise NotImplementedError()
+    @minimized.setter
+    def minimized(self,minimize:bool):
+        if os.name=='nt':
+            if minimize:
+                win32gui.ShowWindow(self.hWnd,win32con.SW_MINIMIZE)
+            else:
+                win32gui.ShowWindow(self.hWnd,win32con.SW_RESTORE)
+        else:
+            raise NotImplementedError()
+
+    @property
+    def maximized(self)->bool:
+        """
+        Get/set the maximized state of the window
+        """
+        if os.name=='nt':
+            startupInfo=win32process.GetStartupInfo()
+            return startupInfo.wShowWindow|win32con.SW_MAXIMIZE
+        else:
+            raise NotImplementedError()
+    @maximized.setter
+    def maximized(self,maximize:bool):
+        if os.name=='nt':
+            if maximize:
+                win32gui.ShowWindow(self.hWnd,win32con.SW_MAXIMIZE)
+            else:
+                win32gui.ShowWindow(self.hWnd,win32con.SW_RESTORE)
+        else:
+            raise NotImplementedError()
 
     def restore(self)->None:
         """
         Restore this window from minimized state
         """
-        win32gui.ShowWindow(self.hwnd,win32con.SW_RESTORE)
+        if os.name=='nt':
+            win32gui.ShowWindow(self.hwnd,win32con.SW_RESTORE)
+        else:
+            raise NotImplementedError()
 
     def close(self)->None:
         """
