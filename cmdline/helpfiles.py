@@ -7,16 +7,25 @@ Supports:
     * the installed Linux man pages
     * [in progress] the windows help system
 """
+import typing
 import re
 import subprocess
 
 
 class CommandLineOption:
-    def __init__(self,options,name=None,description='',paramsAfter=None):
+    """
+    A description of a single command line option
+    """
+
+    def __init__(self,
+        options:typing.Union[str,typing.Iterable[str]],
+        name:typing.Optional[str]=None,
+        description:str='',
+        paramsAfter:typing.Optional[typing.Iterable[str]]=None):
         """
         If name is not given, it will attempt to use the longest option name.
         """
-        if type(options)!=list:
+        if isinstance(options,str):
             options=[options]
         self.options=options
         if len(paramsAfter)>1 and paramsAfter[0]=='=':
@@ -39,8 +48,14 @@ class CommandLineOption:
         self.description=description
         self.paramsAfter=paramsAfter
 
-    def getHelp(self):
+    def getHelp(self)->str:
+        """
+        Get a basic help string for this option
+        """
         return self.name+' - '+self.description
+
+    def __repr__(self)->str:
+        return self.getHelp()
 
 
 class HelpSystemEntry:
@@ -56,7 +71,7 @@ class HelpSystemEntry:
         because that's what was written first. This is a little
         non-intuitive and should be changed.
     """
-    def __init__(self,app=None):
+    def __init__(self,app:typing.Optional[str]=None):
         self.app=app
         self.name=app
         self.description=''
@@ -64,7 +79,7 @@ class HelpSystemEntry:
         self.helpText=None
         self.helpHtml=None
 
-    def getHelpHtml(self):
+    def getHelpHtml(self)->str:
         """
         Gets the help as html, fetching it from the help system if necessary.
         """
@@ -72,13 +87,13 @@ class HelpSystemEntry:
             if self.helpText is None:
                 self.getCommandLineOptions()
             if self.helpHtml is None:
-                # appears redundant, but is here in case 
+                # appears redundant, but is here in case
                 # getCommandLineOptions returned some html
                 title='Help: '+self.__toHtml(self.name)
                 self.helpHtml='<html><head><title>'+title+'</title></head><body><h1>'+title+'</h1><div style="margin-left:2cm;font-family:\'Courier New\',monospace;">'+self.__toHtml(self.helpText)+'</div></body></html>' # noqa: E501 # pylint: disable = line-too-long
         return self.helpHtml
 
-    def getHelpChm(self):
+    def getHelpChm(self)->str:
         """
         Gets the help as windows chm file, fetching it from the
         help system if necessary.
@@ -90,9 +105,9 @@ class HelpSystemEntry:
             get it from the homepage:
                 http://gnochm.sourceforge.net/pychm.html
         """
-        return None
+        return '' # TODO: implement this
 
-    def getHelpText(self):
+    def getHelpText(self)->str:
         """
         Gets the help as plain text, fetching it from the
         help system if necessary.
@@ -103,13 +118,15 @@ class HelpSystemEntry:
             if self.helpText is None:
                 # appears redundant, but is here in case
                 # getCommandLineOptions returned some text
-                self.helpText=__unHtml(self,self.helpHtml,preformatted=True)
+                self.helpText=self.__unHtml(self.helpHtml,preformatted=True)
         return self.helpText
 
     def __repr__(self):
         return self.getHelpText()
 
-    def getCommandLineOptions(self,urlBufferOrFile=None):
+    def getCommandLineOptions(self,
+        urlBufferOrFile:typing.Union[None]=None
+        )->typing.Iterable[CommandLineOption]:
         """
         Tries to get the command line options for a program any way it can.
 
@@ -144,14 +161,16 @@ class HelpSystemEntry:
                 if len(urlBufferOrFile)>1:
                     self.__getCommandLineOptionsFromAppHelp(urlBufferOrFile[1])
                 else:
-                    self.__getCommandLineOptionsFromAppHelp()
+                    raise Exception(
+                        'Nothing to get the command line arguments of')
                 return
             elif urlBufferOrFile.find('\n') or urlBufferOrFile.find('<'):
                 # buffer
                 textBuffer=urlBufferOrFile
-            elif urlBufferOrFile.find('://'):
+            elif urlBufferOrFile.find('://')>=0:
                 # url or file
-                f=open(urlBufferOrFile,'r')
+                from paths import Url
+                f=Url(urlBufferOrFile)
                 textBuffer=f.read()
                 f.close()
             textBuffer=textBuffer.strip()
@@ -166,51 +185,71 @@ class HelpSystemEntry:
             if len(self.commandLineOptions)<1:
                 self.__getCommandLineOptionsFromAppHelp('/?') # windows style
             if len(self.commandLineOptions)<1:
-                self.__getCommandLineOptionsFromAppHelp('--help') # this is fairly common
+                self.__getCommandLineOptionsFromAppHelp('--help') # this is fairly common # noqa: E501 # pylint: disable = line-too-long
             if len(self.commandLineOptions)<1:
-                self.__getCommandLineOptionsFromAppHelp('-h') # now we're just getting desperate
+                self.__getCommandLineOptionsFromAppHelp('-h') # now we're just getting desperate # noqa: E501 # pylint: disable = line-too-long
         return self.commandLineOptions
 
-    def __getCommandLineOptionsFromText(self,text):
+    def __getCommandLineOptionsFromText(self,
+        text:str
+        )->typing.Iterable[CommandLineOption]:
         """
-        this re returns (options separated by space and/or comma) (parameters) (multiline description)
+        this reges returns:
+            (options separated by space and/or comma)
+            (parameters)
+            (multiline description)
         it could maybe use some cleanup, but works pretty well overall
         """
         self.helpText=text
-        regex=r"""^((?:[,\s]*[-/]{1,2}[^\s]*)+)(\s.*?)[\s\.:=>]{2,}(.*?)(?:(?=^\s*[-/])|\z)"""
+        regex=r"""^((?:[,\s]*[-/]{1,2}[^\s]*)+)(\s.*?)[\s\.:=>]{2,}(.*?)(?:(?=^\s*[-/])|\z)""" # noqa: E501 # pylint: disable = line-too-long
         regex=re.compile(regex,re.MULTILINE|re.DOTALL)
         for m in regex.finditer(text):
             options=str(m.group(1)).replace(',',' ').strip().split(' ')
             parameters=str(m.group(3)).strip().split(' ')
-            # TODO: Do we need a more platform-independent way of spliting lines?
-            description=' '.join([l.strip() for l in str(m.group(3)).split('\n')]) # remove newlines and indents
-            self.commandLineOptions.append(CommandLineOption(options,description=description,paramsAfter=parameters))
+            # TODO: Do we need a more platform-independent
+            # way of spliting lines?
+            description=' '.join([line.strip() for line in str(m.group(3)).split('\n')]) # remove newlines and indents # noqa: E501 # pylint: disable = line-too-long
+            self.commandLineOptions.append(CommandLineOption(
+                options,description=description,paramsAfter=parameters))
 
-    def __unHtml(self,html,preformatted=False):
+    def __unHtml(self,html:str,preformatted:bool=False)->str:
         """
         Attempts to convert a chunk of html into plain text.
         """
-        if preformatted==False:
+        if not preformatted:
             html=html.replace('\n',' ')
         html=html.split('<')
-        def decode(tag,contents=''):
+        def decodeTag(tag:str,contents:str='')->str:
+            """
+            Decode a single tag
+            """
             tag=tag.split('/',1)[0].split(' ',1)[0].lower()
             if tag in ['br','p','div','h1','h2','h3','h4','table','tr']:
                 return '\n'+contents
             elif tag =='td':
                 return '\t'+contents
             return ' '+contents
-        html=html[0]+(''.join([decode(*h.rsplit('>',1)) for h in html[1:]]))
+        html=html[0]+(''.join([decodeTag(*h.rsplit('>',1)) for h in html[1:]]))
         html=html.replace('  ',' ').split('&')
-        ampcodes={'gt':'>','lt':'<','minus':'-','plus':'+','nbsp':' ','amp':'&'}
-        def decode(ampcode,remainder):
+        ampcodes={
+            'gt':'>',
+            'lt':'<',
+            'minus':'-',
+            'plus':'+',
+            'nbsp':' ',
+            'amp':'&'}
+        def decodeAmpresand(ampcode:str,remainder:str)->str:
+            """
+            decode a single html apresand code
+            """
             if ampcode in ampcodes:
                 remainder=ampcodes[ampcode]+remainder
             return remainder
-        html=html[0]+''.join([decode(*h.split(';',1)) for h in html[1:]])
+        html=html[0]+''.join([
+            decodeAmpresand(*h.split(';',1)) for h in html[1:]])
         return html.replace(' .','.').replace(' ,',',')
 
-    def __toHtml(self,text):
+    def __toHtml(self,text:str)->str:
         """
         Attempts to convert a chunk of text into html.
         """
@@ -222,7 +261,9 @@ class HelpSystemEntry:
         text=text.replace('\n','<br />\n')
         return text
 
-    def __getCommandLineOptionsFromHtml(self,html):
+    def __getCommandLineOptionsFromHtml(self,
+        html:str
+        )->typing.Iterable[CommandLineOption]:
         """
         Searches some html for command line options.
 
@@ -230,9 +271,9 @@ class HelpSystemEntry:
         it any random thing, it will give it the ol' college try!
         """
         self.helpHtml=html
-        if html.find('meta name="generator" content="groff'): # indicates this is an html man page
-            #sectionRe=r"""<h2>\s*([^\s<]+).*?<p[^>]*>(.*?)(?=</p>)""" # old one
-            sectionRe=r"""<h2>\s*([^\s<]+).*?<p[^>]*>(.*?)(?:(?=</p>\s*?<(?:h2|/body)>))"""
+        if html.find('meta name="generator" content="groff'): # indicates this is an html man page # noqa: E501 # pylint: disable = line-too-long
+            #sectionRe=r"""<h2>\s*([^\s<]+).*?<p[^>]*>(.*?)(?=</p>)""" # old one # noqa: E501 # pylint: disable = line-too-long
+            sectionRe=r"""<h2>\s*([^\s<]+).*?<p[^>]*>(.*?)(?:(?=</p>\s*?<(?:h2|/body)>))""" # noqa: E501 # pylint: disable = line-too-long
             sectionRe=re.compile(sectionRe,re.MULTILINE|re.DOTALL)
             sections={}
             for m in sectionRe.finditer(html):
@@ -242,9 +283,11 @@ class HelpSystemEntry:
             elif 'NAME' in sections:
                 self.description=self.__unHtml(sections['NAME'])
             if 'SYNOPSIS' in sections:
-                plaintext=self.__unHtml(sections['SYNOPSIS'].replace('</b>',' .... '),preformatted=True)
+                plaintext=self.__unHtml(
+                    sections['SYNOPSIS'].replace('</b>',' .... '),
+                    preformatted=True)
                 self.__getCommandLineOptionsFromText(plaintext)
-            if len(self.commandLineOptions)<1 and 'DESCRIPTION' in sections: # try to get from description
+            if len(self.commandLineOptions)<1 and 'DESCRIPTION' in sections: # try to get from description # noqa: E501 # pylint: disable = line-too-long
                 plaintext=self.__unHtml(sections['DESCRIPTION'])
                 self.__getCommandLineOptionsFromText(plaintext)
         else:
@@ -252,7 +295,9 @@ class HelpSystemEntry:
             plaintext=self.__unHtml(html)
             self.__getCommandLineOptionsFromText(plaintext)
 
-    def __getCommandLineOptionsFromAppHelp(self,cmdline):
+    def __getCommandLineOptionsFromAppHelp(self,
+        cmdline:str
+        )->typing.Iterable[CommandLineOption]:
         """
         Tries to get the command line options for a program from
         the program itsself.
@@ -261,21 +306,27 @@ class HelpSystemEntry:
         we need a way to bust out after a period of time!
         """
         cmd=self.app+' '+cmdline
-        out,_=subprocess.Popen(cmd,
-            stderr=subprocess.PIPE,stdout=subprocess.PIPE,shell=True).communicate()
+        po=subprocess.Popen(cmd,
+            stderr=subprocess.PIPE,stdout=subprocess.PIPE,shell=True)
+        out,_=po.communicate()
         self.__getCommandLineOptionsFromText(out)
 
-    def __getCommandLineOptionsFromMan(self):
+    def __getCommandLineOptionsFromMan(self
+        )->typing.Iterable[CommandLineOption]:
         """
         Tries to get the command line options for a program from
         its registered man page.
         """
         cmd='man --html=cat '+self.app
-        out,_=subprocess.Popen(cmd,
-            stderr=subprocess.PIPE,stdout=subprocess.PIPE,shell=True).communicate()
+        po=subprocess.Popen(cmd,
+            stderr=subprocess.PIPE,stdout=subprocess.PIPE,shell=True)
+        out,_=po.communicate()
         self.__getCommandLineOptionsFromHtml(out)
 
-    def getDescription(self,stripNewlines=False,lineWrap=None):
+    def getDescription(self,
+        stripNewlines:bool=False,
+        lineWrap:typing.Optional[bool]=None
+        )->str:
         """
         Gets the description of the program if available.
 
@@ -284,7 +335,11 @@ class HelpSystemEntry:
         """
         return self._lineWrap(self.description,stripNewlines,lineWrap)
 
-    def _lineWrap(self,text,stripNewlines=False,cols=None):
+    def _lineWrap(self,
+        text:str,
+        stripNewlines:bool=False,
+        cols:typing.Union[None,int,bool]=None
+        )->str:
         """
         Word wraps some text.
 
@@ -296,44 +351,40 @@ class HelpSystemEntry:
             if stripNewlines:
                 text=text.replace('\n','')
             if cols is not None:
-                if cols==True:
-                    cols=80
+                if isinstance(cols,bool):
+                    if cols:
+                        cols=80
+                    else:
+                        cols=None
                 a=[]
-                for l in text.split('\n'):
-                    line=[]
+                for line in text.split('\n'):
+                    newLine=[]
                     count=0
-                    words=l.split(' ')
+                    words=line.split(' ')
                     for w in words:
                         nextcount=len(w)
                         if count+nextcount>cols:
-                            a.append(' '.join(line))
-                            line=[]
+                            a.append(' '.join(newLine))
+                            newLine=[]
                             count=0
-                        line.append(w)
+                        newLine.append(w)
                         count=count+nextcount+1
-                    a.append(' '.join(line))
+                    a.append(' '.join(newLine))
                 text='\n'.join(a)
         return text
 
 
-if __name__ == '__main__':
+def main(args:typing.Iterable[str])->int:
     """
     This generates help for a command line app from the command line.
+
+    :args: command line parameters WITOUT sys.argv[0]
     """
-    import sys
-    # Use the Psyco python accelerator if available
-    # See:
-    #     http://psyco.sourceforge.net
-    try:
-        import psyco
-        psyco.full() # accelerate this program
-    except ImportError:
-        pass
     printhelp=False
     cmd=None
     infoFrom=[]
     out=[]
-    for arg in sys.argv[1:]:
+    for arg in args:
         if cmd is None:
             if arg[0]=='-':
                 if arg[1]=='-':
@@ -355,9 +406,9 @@ if __name__ == '__main__':
         printhelp=True
     if printhelp:
         print('USAGE:')
-        print('\thelpfiles.py --out=filename [--out=filename ...] cmd [get_info_from]')
+        print('\thelpfiles.py --out=filename [--out=filename ...] cmd [get_info_from]') # noqa: E501 # pylint: disable = line-too-long
         print('PARAMS:')
-        print('\t--out=<filename> ..... output to save.  If filename is just an extension, save to stdout.')
+        print('\t--out=<filename> ..... output to save.  If filename is just an extension, save to stdout.') # noqa: E501 # pylint: disable = line-too-long
         print('\t\tcurrently supports: ".txt" (default), ".html", or ".chm"')
         print('EXAMPLES:')
         print('\tAutomatically generate help for "ls" to the file "ls.html":')
@@ -379,30 +430,25 @@ if __name__ == '__main__':
         print('\t... same idea only opposite direction:')
         print('\t\thelpfiles.py --out=.html ls README.txt')
     else:
+        from pathlib import Path
         wrapper=HelpSystemEntry(cmd)
         wrapper.getCommandLineOptions(' '.join(infoFrom))
         if len(out)==0:
             out.append('.txt')
         for o in out:
-            extn=o.rsplit('.',1)
-            if extn[-1]=='html' or extn[-1]=='htm':
-                if len(extn)<2 or extn[0]=='' or extn[0]=='-':
-                    print(wrapper.getHelpHtml())
-                else:
-                    f=open(o,'w')
-                    f.write(wrapper.getHelpHtml())
-                    f.close()
-            elif extn[-1]=='chm':
-                if len(extn)<2 or extn[0]=='' or extn[0]=='-':
-                    print(wrapper.getHelpChm())
-                else:
-                    f=open(o,'w')
-                    f.write(wrapper.getHelpChm())
-                    f.close()
+            path=Path(o)
+            if path.suffix in ('.html','.htm'):
+                data=wrapper.getHelpHtml()
+            elif path.suffix=='chm':
+                data=wrapper.getHelpChm()
             else: # the default is .txt
-                if len(extn)<2 or extn[0]=='' or extn[0]=='-':
-                    print(wrapper.getHelpText())
-                else:
-                    f=open(o,'w')
-                    f.write(wrapper.getHelpText())
-                    f.close()
+                data=wrapper.getHelpText()
+            if path.stem in ('','-'):
+                print(data)
+            else:
+                path.write_text(data,'utf-8',errors='ignore')
+
+
+if __name__ == '__main__':
+    import sys
+    sys.exit(main(sys.argv[1:]))

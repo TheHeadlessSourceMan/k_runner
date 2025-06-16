@@ -14,8 +14,15 @@ if os.name=='nt':
     import win32process
     import win32con
     import pywintypes
-from .asProcess import (
-    ProcessCompatible,asProcess) # pylint: disable=wrong-import-position
+try:
+    import codeTools.debuggerManager as debuggerManager
+    from codeTools import ProgramDebugInfo
+    hasDebuggerManager=True
+except ImportError:
+    ProgramDebugInfo=typing.Any
+    hasDebuggerManager=False
+from .asProcess import ( # noqa: E402 # pylint: disable=wrong-import-position
+    ProcessCompatible,asProcess)
 if typing.TYPE_CHECKING:
     from k_runner.ui.window import Window
     from cmdline.commandLine import CommandLine
@@ -79,10 +86,12 @@ class Process(psutil.Process):
         Get the command line
         """
         return self.commandLine
-    @property
     def cmdline(self)->"CommandLine":
         """
-        Get the command line
+        Get the command line.
+
+        NOTE: this is a function in order to
+        keep it compatible with psutil.Process
         """
         return self.commandLine
 
@@ -118,18 +127,19 @@ class Process(psutil.Process):
         return self._pid
 
     @property
-    def programDebugInfo(self)->typing.Optional[typing.Any]:
+    def programDebugInfo(self
+        )->typing.Optional[ProgramDebugInfo]: # type: ignore
         """
         Gets the registered program debug profile (in DebuggerManager)
         if there is one.
         """
-        if self._programDebugInfo is None:
-            import codeTools.debuggerManager as debuggerManager
+        if hasDebuggerManager and self._programDebugInfo is None:
             self._programDebugInfo=\
                 debuggerManager.DebuggerManager.getProgramDebugInfo(self.name)
         return self._programDebugInfo
     @programDebugInfo.setter
-    def programDebugInfo(self,programDebugInfo:typing.Any):
+    def programDebugInfo(self,
+        programDebugInfo:ProgramDebugInfo): # type: ignore
         self._programDebugInfo=programDebugInfo
 
     def attachDebugger(self)->str:
@@ -139,7 +149,7 @@ class Process(psutil.Process):
         """
         pdi=self.programDebugInfo
         if pdi is not None:
-            return pdi.attachDebugger(self.pid)
+            return pdi.attachDebugger(self.pid) # noqa: E501 # pylint: disable=too-many-function-args
         return 'ERR: no debugger found'
     debug=attachDebugger
 
@@ -215,18 +225,6 @@ class Process(psutil.Process):
         raise NotImplementedError()
     @priority.setter
     def priority(self,priority:int):
-        raise NotImplementedError()
-
-    def kill(self):
-        """
-        Kill the process
-        """
-        raise NotImplementedError()
-
-    def wait(self):
-        """
-        Wait for the process to complete
-        """
         raise NotImplementedError()
 
     def __eq__(self,

@@ -19,7 +19,8 @@ class ClassWithProcess(typing.Protocol):
     process:"ProcessCompatible"
 
 
-ProcessCompatible=typing.Union[int,"Process",ClassWithPid,ClassWithProcess,psutil.Process]
+ProcessCompatible=typing.Union[
+    int,"Process",ClassWithPid,ClassWithProcess,psutil.Process]
 
 
 def asProcess(proc:ProcessCompatible):

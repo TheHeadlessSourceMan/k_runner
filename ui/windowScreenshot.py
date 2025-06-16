@@ -36,8 +36,8 @@ def cmdline(args:typing.Iterable[str])->int:
         print('Usage:')
         print('   windowScreenshot.py [options]')
         print('Options:')
-        print('   --title=[title] ........ find windows with title')
-        print('   --out=[filename] ....... output filename to save screenshot(s)')
+        print('   --title=[title] .... find windows with title')
+        print('   --out=[filename] ... output filename to save screenshot(s)')
         return -1
     for window in findWindows(title):
         window.saveScreenshot(filename)

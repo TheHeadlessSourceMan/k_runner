@@ -4,7 +4,6 @@ This is helper for creating function calls that run command line
 programs
 """
 import typing
-from pathlib import Path
 from paths import asUrl,UrlCompatible
 from .helpfiles import HelpSystemEntry
 

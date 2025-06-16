@@ -93,11 +93,12 @@ class PossiblyRunningApplication:
                     processArgs[0]=processFullFilename
                 pid=proc.pid
                 try:
+                    from k_runner.cmdline import argvToString
                     print(f'killing ({pid}): {argvToString(processArgs)}')
                     self._stuffThatWeStopped.append(
                         (processFullFilename,processArgs))
                     proc.kill()
-                except (psutil.AccessDenied, psutil.NoSuchProcess):
+                except (psutil.AccessDenied,psutil.NoSuchProcess):
                     pass
         return len(self._stuffThatWeStopped)
 
@@ -105,6 +106,7 @@ class PossiblyRunningApplication:
         """
         restart the applications we stop()'ed
         """
+        from k_runner.cmdline import argvToString
         for _,argv in self._stuffThatWeStopped:
             print(f'restarting: {argvToString(argv)}')
             subprocess.Popen(argv,shell=True,stdin=subprocess.DEVNULL,
