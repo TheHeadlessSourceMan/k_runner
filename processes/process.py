@@ -14,7 +14,8 @@ if os.name=='nt':
     import win32process
     import win32con
     import pywintypes
-from .asProcess import ProcessCompatible,asProcess # pylint: disable=wrong-import-order
+from .asProcess import (
+    ProcessCompatible,asProcess) # pylint: disable=wrong-import-position
 if typing.TYPE_CHECKING:
     from k_runner.ui.window import Window
     from cmdline.commandLine import CommandLine
@@ -329,13 +330,13 @@ class Process(psutil.Process):
         """
         return [Window(hWnd) for hWnd in self.hWnds]
     @property
-    def windows(self)->typing.Iterable[Window]:
+    def windows(self)->typing.Iterable["Window"]:
         """
         Get all top level windows for the process
         """
         return self.getWindows()
 
-    def getWindow(self)->typing.Optional[Window]:
+    def getWindow(self)->typing.Optional["Window"]:
         """
         Get the main top level windows for the process
         """
@@ -344,7 +345,7 @@ class Process(psutil.Process):
             return None
         return Window(hWnd)
     @property
-    def window(self)->typing.Optional[Window]:
+    def window(self)->typing.Optional["Window"]:
         """
         Get all top level windows for the process
         """
