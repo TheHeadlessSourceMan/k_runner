@@ -699,7 +699,8 @@ class UiComponent(UiComponentGroup):
         hWnd=self.hWnd
         oldMinAnimation=self.setMinimizeAnimation(hWnd,False)
         oldTransparency=self.setTransparency(hWnd,True)
-        oldMin=self.minimize(False)
+        oldMin=self.minimized
+        self.minimize(False)
         img=self._capture(hWnd,getChildren)
         self.minimize(oldMin)
         self.setTransparency(hWnd,oldTransparency==1)
