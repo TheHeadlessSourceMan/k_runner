@@ -685,6 +685,18 @@ class OsRunJob:
                 # TODO: not sure how to do this.
                 # Maybe the "nice" command or something??
                 raise NotImplementedError()
+        if os.name=='nt':
+            from win32con import SW_MINIMIZE,SW_MAXIMIZE,SW_HIDE
+            startupinfo=subprocess.STARTUPINFO()
+            startupinfo.dwFlags=subprocess.STARTF_USESHOWWINDOW
+            if self.osRun.showMinimized:
+                startupinfo.wShowWindow|=SW_MINIMIZE
+            if self.osRun.showMaximized:
+                startupinfo.wShowWindow|=SW_MAXIMIZE
+            if self.osRun.showHidden:
+                startupinfo.wShowWindow|=SW_HIDE
+        else:
+            startupinfo=None
         if self.osRun.debug:
             print('$> ',' '.join(cmd))
         try:
@@ -698,10 +710,14 @@ class OsRunJob:
             #    bufsize=1,creationflags=creationflags,cwd=workingDirectory)
             self._popen=subprocess.Popen(cmd,
                 shell=self.osRun.shell,
-                stdout=subprocess.PIPE,stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 stdin=subprocess.PIPE,
                 creationflags=creationflags,
-                cwd=str(workingDirectory),env=self.osRun.env)
+                cwd=str(workingDirectory),
+                env=self.osRun.env,
+                startupinfo=startupinfo
+                )
         except Exception as e:
             raise OsRunException(cmd,e) from e
         if previousDirectory is not None:
@@ -886,7 +902,10 @@ class OsRun:
         callOnStderrChar:typing.Optional[StringNotifies]=None,
         callOnStdoutErrChar:typing.Optional[StringNotifies]=None,
         priority:int=MEDIUM_PRIORITY,
-        ansiHandling:str="strip"
+        ansiHandling:str="strip",
+        showHidden:bool=False,
+        showMinimized:bool=False,
+        showMaximized:bool=False
         ):
         """
         :param workingDirectory: perform the operation in a specific directory
@@ -942,6 +961,9 @@ class OsRun:
         self.addCallOnStdoutChar(callOnStdoutChar)
         self.addCallOnStderrChar(callOnStderrChar)
         self.addCallOnStdoutErrChar(callOnStdoutErrChar)
+        self.showHidden=showHidden
+        self.showMinimized=showMinimized
+        self.showMaximized=showMaximized
 
     def addCallOnStdoutLine(self,
         addThis:typing.Optional[StringNotifies]=None
