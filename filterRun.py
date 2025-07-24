@@ -59,6 +59,7 @@ class FilterRun:
         )->typing.Generator[str,None,None]:
         """
         run the program and yield only lines that
+        are not filtered out by the filters
         """
         for line in self.osrun(
             moreParams,
@@ -75,6 +76,7 @@ class FilterRun:
         )->typing.Generator[str,None,None]:
         """
         run the program and yield only lines that
+        are not filtered out by the filters
         """
         return self.runIter(
             moreParams,

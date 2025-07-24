@@ -230,20 +230,20 @@ class OsRunResult:
         ret['returncode']=self.returncode
         if not self.finished:
             ret['finished']=self.finished
-        if self.stdout is not None:
+        if self.stdout is not None and self.stdout:
             ret['stdout']=self.stdout
-        if self.stdout is not None:
+        if self.stderr is not None and self.stderr:
             ret['stderr']=self.stderr
-        if self.stdout is not None:
-            ret['stdouterr']=self.stdout
+        if self.stdouterr is not None and self.stdouterr:
+            ret['stdouterr']=self.stdouterr
         return ret
     @jsonObj.setter
     def jsonObj(self,jsonObj:typing.Dict[str,typing.Any]):
         self.returncode=jsonObj.get('returncode','')
         self.finished=jsonObj.get('finished',True)
-        self.stdout=jsonObj.get('stdout',None)
-        self.stderr=jsonObj.get('stderr',None)
-        self.stdouterr=jsonObj.get('stdouterr',None)
+        self.stdout=jsonObj.get('stdout','')
+        self.stderr=jsonObj.get('stderr','')
+        self.stdouterr=jsonObj.get('stdouterr','')
 
     def load(self,filename:str)->None:
         """
@@ -595,7 +595,9 @@ class OsRunJob:
         (NOTE: if you want carriage return, you
         may want to use writeln() instead)
         """
-        if self._popen is not None:
+        if self._popen is not None \
+            and self._popen.stdin is not None:
+            #
             v=' '.join([str(v) for v in vals])
             self._popen.stdin.write(v)
             self._popen.stdin.flush()
@@ -603,7 +605,9 @@ class OsRunJob:
         """
         Write data to the job's stdin
         """
-        if self._popen is not None:
+        if self._popen is not None \
+            and self._popen.stdin is not None:
+            #
             v=' '.join([str(v) for v in vals])
             self._popen.stdin.write(v)
             self._popen.stdin.write('\n')
@@ -734,8 +738,8 @@ class OsRunJob:
             bufB.done=True
             # last one out shuts down popen
             if self._popen is not None \
-                and self._popen.stdout.closed \
-                and self._popen.stderr.closed:
+                and (self._popen.stdout is None or self._popen.stdout.closed)\
+                and (self._popen.stderr is None or self._popen.stderr.closed):
                 #
                 self.running=False
                 bufA.done=True
@@ -1049,7 +1053,10 @@ class OsRun:
         self.shell=jsonObj.get('shell',False)
         self.detach=jsonObj.get('detach',False)
         self.debug=jsonObj.get('debug',False)
-        self.workingDirectory=Path(jsonObj.get('workingDirectory',None))
+        wd=jsonObj.get('workingDirectory',None)
+        if wd is not None:
+            wd=Path(wd)
+        self.workingDirectory=wd
 
     def load(self,filename:str)->None:
         """
