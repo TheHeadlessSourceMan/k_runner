@@ -34,7 +34,7 @@ def runPythonFile(
     onOutputCB:typing.Optional[typing.Callable]=None,
     onErrorCB:typing.Optional[typing.Callable]=None,
     shell:bool=False
-    )->int:
+    )->typing.Tuple[bool,str,int]:
     """
     runs a python script
 
