@@ -8,7 +8,7 @@ from pathlib import Path
 import json
 from k_runner.dataRecievedCallbacks import DataRecievedCallbacks
 from k_runner.processes.priority import MEDIUM_PRIORITY
-from k_runner.commandLine import commandlineSplit
+from k_runner.cmdline import commandlineSplit
 from k_runner.osRunResult import OsRunResult
 from k_runner.osRunJob import OsRunJob
 

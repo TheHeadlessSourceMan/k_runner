@@ -1,7 +1,21 @@
 """
-Tools for working with command lines
+Tools for working with command line strings
 """
 import typing
+
+
+def argvToString(argv:typing.Iterable[str])->str:
+    """
+    convert a list of arguments into a string
+    does helpful things like adding quotes
+    """
+    ret=[]
+    for arg in argv:
+        if arg.find(' ')>=0 or arg.find('"')>=1:
+            arg=arg.replace('\\','\\\\').replace('"','\\"')
+            arg=f'"{arg}"'
+        ret.append(arg)
+    return ' '.join(ret)
 
 
 def commandlineSplit(cmdline:typing.Union[str,typing.Iterable[str]]

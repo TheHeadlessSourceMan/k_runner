@@ -9,20 +9,6 @@ from .helpfiles import HelpSystemEntry
 from .asCommandLine import CommandLineCompatible
 
 
-def argvToString(argv:typing.Iterable[str])->str:
-    """
-    convert a list of arguments into a string
-    does helpful things like adding quotes
-    """
-    ret=[]
-    for arg in argv:
-        if arg.find(' ')>=0 or arg.find('"')>=1:
-            arg=arg.replace('\\','\\\\').replace('"','\\"')
-            arg=f'"{arg}"'
-        ret.append(arg)
-    return ' '.join(ret)
-
-
 class CommandLineWrapper(HelpSystemEntry):
     """
     A tool to create function calls from command line apps
