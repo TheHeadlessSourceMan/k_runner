@@ -12,7 +12,7 @@ try:
     hasPyEv=True
 except ImportError:
     hasPyEv=False
-from .callbackDefs import ApplicationCallbacks
+from .dataRecievedCallbacks import ApplicationCallbacks
 
 
 def hideAllWindows(pid:int,hide:bool=True)->None:
@@ -130,28 +130,22 @@ class Application:
         if self.runInShell is not None:
             cmd.insert(0,self.runInShellCommandFlag)
             cmd.insert(0,self.getShell())
-        if callbacks.stdoutLine is None:
-            def onOutput(msg):
-                """
-                stdout callback
-                """
-                print(msg)
-            onOutputCB=onOutput
-        else:
-            onOutputCB=callbacks.stdoutLine
-        if callbacks.stderrLine is None:
-            def onError(msg:str):
-                """
-                stderr callback
-                """
-                print("[ERR] {err}")
-                # make sure we get all the error message then quit
-                app.wDogOutput=None
-                app.lifetimeCounter=0.0
-                app.wDogLifetime=0.100
-            onErrorCB=onError
-        else:
-            onErrorCB=callbacks.stderrLine
+        def onOutput(msg):
+            """
+            stdout callback
+            """
+            print(f'>>> {msg}')
+        callbacks.addCallOnStdoutLine(onOutput)
+        def onError(msg:str):
+            """
+            stderr callback
+            """
+            print("[ERR] {err}")
+            # make sure we get all the error message then quit
+            app.wDogOutput=None
+            app.lifetimeCounter=0.0
+            app.wDogLifetime=0.100
+        callbacks.addCallOnStderrLine(onError)
         self.callbacks=callbacks
         self.dDogOutput=wDogOutput
         self.wDogLifetime=wDogLifetime

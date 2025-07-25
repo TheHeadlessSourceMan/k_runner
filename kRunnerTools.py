@@ -14,7 +14,7 @@ old subprocess module.
 """
 import typing
 import os
-from .callbackDefs import ApplicationCallbacks
+from .dataRecievedCallbacks import ApplicationCallbacks
 if os.name=='nt':
     from _kRunnerToolsWindows import Application
 else:

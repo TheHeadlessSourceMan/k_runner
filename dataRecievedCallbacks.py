@@ -19,7 +19,7 @@ BytesNotifies=typing.Union[BytesNotify,typing.Iterable[BytesNotify]]
 BytesNotifyList=typing.List[BytesNotify]
 
 
-class RunCallbacks:
+class DataRecievedCallbacks:
     """
     A group of run callbacks
     """
@@ -38,7 +38,7 @@ class RunCallbacks:
         stdouterrBytesCallbacks:typing.Optional[BytesNotifies]=None,
         stdoutBytesCallbacks:typing.Optional[BytesNotifies]=None,
         stderrBytesCallbacks:typing.Optional[BytesNotifies]=None,
-        runCallbacks:typing.Optional["RunCallbacks"]=None):
+        runCallbacks:typing.Optional["DataRecievedCallbacks"]=None):
         """ """
         self._byteNotifiers:typing.Tuple[
             BytesNotifyList,BytesNotifyList,BytesNotifyList]=([],[],[])
@@ -66,7 +66,7 @@ class RunCallbacks:
         if stderrBytesCallbacks is not None:
             self.addBytesNotifies(self.STDERR,stderrBytesCallbacks)
 
-    def assignCallbacks(self,other:typing.Optional["RunCallbacks"]):
+    def assignCallbacks(self,other:typing.Optional["DataRecievedCallbacks"]):
         """
         Assign the callbacks to match another group
         """
@@ -81,7 +81,7 @@ class RunCallbacks:
         self._charNotifiers=([],[],[])
         self._lineNotifiers=([],[],[])
 
-    def extendCallbacks(self,other:typing.Optional["RunCallbacks"]):
+    def extendCallbacks(self,other:typing.Optional["DataRecievedCallbacks"]):
         """
         Assign the callbacks to match another group
         """
@@ -243,7 +243,14 @@ class RunCallbacks:
         self.addCharNotifies(self.STDOUTERR,notifies)
 
 
-class RecieveDataManager(RunCallbacks):
+class ApplicationCallbacks(DataRecievedCallbacks):
+    """
+    For application messages that are not necessarily
+    data recieved. (Eg, exit, or some other event)
+    """
+
+
+class RecieveDataManager(DataRecievedCallbacks):
     """
     A class for notifying callbacks on incoming process data
 
@@ -253,10 +260,10 @@ class RecieveDataManager(RunCallbacks):
     """
 
     def __init__(self,
-        runCallbacks:typing.Optional[RunCallbacks]=None,
+        runCallbacks:typing.Optional[DataRecievedCallbacks]=None,
         stringFormat:str='utf-8'):
         """ """
-        RunCallbacks.__init__(self,runCallbacks=runCallbacks)
+        DataRecievedCallbacks.__init__(self,runCallbacks=runCallbacks)
         self._keepgoing=True
         self._interleaveStdoutByLine=True # as opposed to by character
         self._pauseNotifications=False

@@ -11,7 +11,7 @@ from pathlib import Path
 import subprocess
 from threading import Thread
 from .exceptions import OsRunException
-from .dataRecievedCallbacks import RunCallbacks
+from .dataRecievedCallbacks import DataRecievedCallbacks
 from .osRunResult import OsRunResult
 from .dataRecievedCallbacks import RecieveDataManager
 from .processes.priority import MEDIUM_PRIORITY,_getWindowsPriorityName
@@ -27,7 +27,7 @@ class OsRunJob(RecieveDataManager):
     """
     def __init__(self,
         osRun:"OsRun",
-        runCallbacks:typing.Optional[RunCallbacks]=None):
+        runCallbacks:typing.Optional[DataRecievedCallbacks]=None):
         """ """
         RecieveDataManager.__init__(self,runCallbacks)
         self._result:typing.Optional[OsRunResult]=None

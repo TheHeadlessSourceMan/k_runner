@@ -6,14 +6,14 @@ import os
 import sys
 from pathlib import Path
 import json
-from k_runner.dataRecievedCallbacks import RunCallbacks
+from k_runner.dataRecievedCallbacks import DataRecievedCallbacks
 from k_runner.processes.priority import MEDIUM_PRIORITY
 from k_runner.commandLine import commandlineSplit
 from k_runner.osRunResult import OsRunResult
 from k_runner.osRunJob import OsRunJob
 
 
-class OsRun(RunCallbacks):
+class OsRun(DataRecievedCallbacks):
     """
     Run a system application.
 
@@ -89,7 +89,7 @@ class OsRun(RunCallbacks):
         cmdLineSplit:typing.Optional[bool]=None,
         workingDirectory:typing.Union[None,str,Path]=None,
         env:typing.Optional[typing.Dict[str,typing.Any]]=None,
-        runCallbacks:typing.Optional[RunCallbacks]=None,
+        runCallbacks:typing.Optional[DataRecievedCallbacks]=None,
         priority:int=MEDIUM_PRIORITY,
         ansiHandling:str="strip",
         showHidden:bool=False,
@@ -106,7 +106,7 @@ class OsRun(RunCallbacks):
         :param ansiHandling: how to handle ansi escape codes
             "strip"(default), "preserve", or "html"
         """
-        RunCallbacks.__init__(self,runCallbacks=runCallbacks)
+        DataRecievedCallbacks.__init__(self,runCallbacks=runCallbacks)
         self.ansiHandling=ansiHandling
         useParams:typing.List[str]=[]
         if cmd is not None \
@@ -221,7 +221,7 @@ class OsRun(RunCallbacks):
         moreParams:typing.Optional[typing.Iterable[str]]=None,
         workingDirectory:typing.Union[None,str,Path]=None,
         maxWait:typing.Optional[float]=None,
-        runCallbacks:typing.Optional[RunCallbacks]=None
+        runCallbacks:typing.Optional[DataRecievedCallbacks]=None
         )->OsRunResult:
         """
         run the command and return the results
@@ -267,7 +267,7 @@ class OsRun(RunCallbacks):
     def runAsync(self,
         moreParams:typing.Optional[typing.Iterable[str]]=None,
         workingDirectory:typing.Union[None,str,Path]=None,
-        runCallbacks:typing.Optional[RunCallbacks]=None
+        runCallbacks:typing.Optional[DataRecievedCallbacks]=None
         )->OsRunJob:
         """
         run the command asynchronously
@@ -352,7 +352,7 @@ def osrun(
     cmdLineSplit:typing.Optional[bool]=None,
     workingDirectory:typing.Union[None,str,Path]=None,
     env:typing.Optional[typing.Dict[str,typing.Any]]=None,
-    runCallbacks:typing.Optional[RunCallbacks]=None
+    runCallbacks:typing.Optional[DataRecievedCallbacks]=None
     )->OsRunResult:
     """ shortcut for OsRun().run(...) """
     return OsRun(cmd,
