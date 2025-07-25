@@ -41,6 +41,7 @@ class OsRunJob(RecieveDataManager):
             # keep a copy in case they change it
             self.workingDirectory=Path(osRun.workingDirectory)
         self.osRun=osRun
+        self.chunkyIO=True
 
     @property
     def pid(self)->typing.Optional[int]:
@@ -190,15 +191,33 @@ class OsRunJob(RecieveDataManager):
                 )
         except Exception as e:
             raise OsRunException(cmd,e) from e
+        if self.chunkyIO:
+            try:
+                # If this api is available, we probably need to call it
+                os.set_blocking(self._popen.stdout.fileno(),False) # type: ignore # pylint: disable=no-member # noqa: E501
+                os.set_blocking(self._popen.stderr.fileno(),False) # type: ignore # pylint: disable=no-member # noqa: E501
+            except Exception as e:
+                pass #print('Problem with set_blocking() chunkyIO disabled')
+                #self.chunkyIO=False
         if previousDirectory is not None:
             os.chdir(previousDirectory)
         # start reading the data
         def _readerThread(whichStream:int,ioObject:BytesIO):
-            while self.running:
-                data=ioObject.read1(1)
-                if len(data)<1:
-                    break
-                self.addBytes(whichStream,data)
+            while self.running and not ioObject.closed:
+                if not self.chunkyIO:
+                    data=ioObject.read1(1)
+                    if len(data)<1:
+                        break
+                    self.addBytes(whichStream,data)
+                else:
+                    data=ioObject.read(80)
+                    if data:
+                        self.addBytes(whichStream,data)
+                    else:
+                        if self._popen is None or self._popen.poll() is not None:
+                            # We read nothing and the process has finished so there won't be more
+                            break
+                        time.sleep(0.005)
             ioObject.close()
             # last one out shuts down popen
             if self._popen is not None \

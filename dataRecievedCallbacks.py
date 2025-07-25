@@ -29,6 +29,15 @@ class RunCallbacks:
     STDOUTERR=2
 
     def __init__(self,
+        stdouterrLineCallbacks:typing.Optional[StringNotifies]=None,
+        stdoutLineCallbacks:typing.Optional[StringNotifies]=None,
+        stderrLineCallbacks:typing.Optional[StringNotifies]=None,
+        stdouterrCharCallbacks:typing.Optional[StringNotifies]=None,
+        stdoutCharCallbacks:typing.Optional[StringNotifies]=None,
+        stderrCharCallbacks:typing.Optional[StringNotifies]=None,
+        stdouterrBytesCallbacks:typing.Optional[BytesNotifies]=None,
+        stdoutBytesCallbacks:typing.Optional[BytesNotifies]=None,
+        stderrBytesCallbacks:typing.Optional[BytesNotifies]=None,
         runCallbacks:typing.Optional["RunCallbacks"]=None):
         """ """
         self._byteNotifiers:typing.Tuple[
@@ -38,6 +47,24 @@ class RunCallbacks:
         self._lineNotifiers:typing.Tuple[
             StringNotifyList,StringNotifyList,StringNotifyList]=([],[],[])
         self.extendCallbacks(runCallbacks)
+        if stdouterrLineCallbacks is not None:
+            self.addLineNotifies(self.STDOUTERR,stdouterrLineCallbacks)
+        if stdoutLineCallbacks is not None:
+            self.addLineNotifies(self.STDOUT,stdoutLineCallbacks)
+        if stderrLineCallbacks is not None:
+            self.addLineNotifies(self.STDERR,stderrLineCallbacks)
+        if stdouterrCharCallbacks is not None:
+            self.addCharNotifies(self.STDOUTERR,stdouterrCharCallbacks)
+        if stdoutCharCallbacks is not None:
+            self.addCharNotifies(self.STDOUT,stdoutCharCallbacks)
+        if stderrCharCallbacks is not None:
+            self.addCharNotifies(self.STDERR,stderrCharCallbacks)
+        if stdouterrBytesCallbacks is not None:
+            self.addBytesNotifies(self.STDOUTERR,stdouterrBytesCallbacks)
+        if stdoutBytesCallbacks is not None:
+            self.addBytesNotifies(self.STDOUT,stdoutBytesCallbacks)
+        if stderrBytesCallbacks is not None:
+            self.addBytesNotifies(self.STDERR,stderrBytesCallbacks)
 
     def assignCallbacks(self,other:typing.Optional["RunCallbacks"]):
         """
@@ -229,7 +256,7 @@ class RecieveDataManager(RunCallbacks):
         runCallbacks:typing.Optional[RunCallbacks]=None,
         stringFormat:str='utf-8'):
         """ """
-        RunCallbacks.__init__(self,runCallbacks)
+        RunCallbacks.__init__(self,runCallbacks=runCallbacks)
         self._keepgoing=True
         self._interleaveStdoutByLine=True # as opposed to by character
         self._pauseNotifications=False
@@ -241,8 +268,14 @@ class RecieveDataManager(RunCallbacks):
             codecs.getincrementaldecoder(self._stringFormat)())
         self._byteBuffers:typing.Tuple[bytearray,bytearray,bytearray]=\
             (bytearray(),bytearray(),bytearray())
+        self._charBuffers:typing.Tuple[typing.List[str],typing.List[str],typing.List[str]]=\
+            ([],[],[])
+        self._currentLineBuffers:typing.Tuple[typing.List[str],typing.List[str],typing.List[str]]=\
+            ([],[],[])
         self._lineBuffers:typing.Tuple[typing.List[str],typing.List[str],typing.List[str]]=\
             ([],[],[])
+        self._stdouterrCurrentLineChars:typing.Tuple[typing.List[str],typing.List[str]]=\
+            ([],[])
         self._notifyQueue=Queue()
 
     def getBytes(self,
@@ -283,20 +316,12 @@ class RecieveDataManager(RunCallbacks):
         if encoding is None:
             encoding=self._stringFormat
         if self._notifyThread is None:
-            return self._byteBuffers[whichStream].decode(encoding,errors='ignore')
+            return ''.join(self._charBuffers[whichStream])
         self._pauseNotifications=True
         time.sleep(0.1)
         q=Queue[str]()
-        b=bytearray(self._byteBuffers[whichStream])
-        if b:
-            while True:
-                try:
-                    s=b.decode(encoding)
-                    for c in s:
-                        q.put(c)
-                    break
-                except UnicodeDecodeError:
-                    b=b[:-1]
+        for c in self._charBuffers[whichStream]:
+            q.put(c)
         def cb(value):
             q.put(value)
         self.addCharNotify(whichStream,cb)
@@ -329,7 +354,7 @@ class RecieveDataManager(RunCallbacks):
             encoding=self._stringFormat
         while self._notifyThread is not None:
             time.sleep(0.1)
-        return self._byteBuffers[whichStream].decode(encoding,errors='ignore')
+        return ''.join(self._charBuffers[whichStream])
     getText=getStr
     __str__=getStr
     @property
@@ -405,20 +430,12 @@ class RecieveDataManager(RunCallbacks):
         if encoding is None:
             encoding=self._stringFormat
         if self._notifyThread is None:
-            return self.getStr(whichStream,encoding).split('\n')
+            return self._lineBuffers[whichStream]
         self._pauseNotifications=True
         time.sleep(0.1)
         q=Queue[str]()
-        b=bytearray(self._byteBuffers[whichStream])
-        if b:
-            while True:
-                try:
-                    s=b.decode(encoding)
-                    for line in s.split('\n')[0:-1]:
-                        q.put(line)
-                    break
-                except UnicodeDecodeError:
-                    b=b[:-1]
+        for line in self._lineBuffers[whichStream]:
+            q.put(line)
         def cb(value):
             q.put(value)
         self.addLineNotify(whichStream,cb)
@@ -451,6 +468,12 @@ class RecieveDataManager(RunCallbacks):
         """
         Do callbacks for individual bytes
         """
+        # Ensure that we are only attempting to decode one at a time
+        if len(b)>1:
+            for bb in b:
+                self._notifyBytes(whichStream,bytes((bb,)))
+            return
+        # save the byte itself
         for callback in self._byteNotifiers[whichStream]:
             try:
                 callback(b)
@@ -461,6 +484,7 @@ class RecieveDataManager(RunCallbacks):
                 else:
                     print(f'Exception caused callback "{callback.__name__}" to be disabled')
                 self._byteNotifiers[whichStream].remove(callback)
+        # we'll append the bytes to the combined stream in the order they were received
         for callback in self._byteNotifiers[self.STDOUTERR]:
             try:
                 callback(b)
@@ -471,15 +495,26 @@ class RecieveDataManager(RunCallbacks):
                 else:
                     print(f'Exception caused callback "{callback.__name__}" to be disabled')
                 self._byteNotifiers[self.STDOUTERR].remove(callback)
-        for n in b:
-            try:
-                c=self._decoders[whichStream].decode(bytes((n,)))
-                self._notifyChar(whichStream,c)
-                if not self._interleaveStdoutByLine:
+        # attempt to convert to character and do all that stuff
+        try:
+            c=self._decoders[whichStream].decode(b)
+            self._notifyChar(whichStream,c)
+            # add the character(s) to the combined stdout/stdin buffer
+            if not self._interleaveStdoutByLine:
+                # add immediaetly
+                self._notifyChar(self.STDOUTERR,c)
+            elif c=='\n':
+                # this ends a line, so add it
+                for c in self._stdouterrCurrentLineChars[whichStream]:
                     self._notifyChar(self.STDOUTERR,c)
-            except UnicodeDecodeError as e:
-                if e.reason!='unexpected end of data':
-                    raise e
+                self._notifyChar(self.STDOUTERR,'\n')
+                self._stdouterrCurrentLineChars[whichStream].clear()
+            else:
+                # store it to add when we've got a full line
+                self._stdouterrCurrentLineChars[whichStream].append(c)
+        except UnicodeDecodeError as e:
+            if e.reason!='unexpected end of data':
+                raise e
 
     def _notifyChar(self,whichStream:int,c:str)->None:
         """
@@ -496,19 +531,14 @@ class RecieveDataManager(RunCallbacks):
                     print(f'Exception caused callback "{callback.__name__}" to be disabled')
                 self._charNotifiers[whichStream].remove(callback)
         if c=='\n':
-            lb=self._lineBuffers[whichStream]
+            lb=self._currentLineBuffers[whichStream]
             if lb and lb[-1]=='\r':
                 lb.pop()
             line=''.join(lb)
             self._notifyLine(whichStream,line)
-            if self._interleaveStdoutByLine and whichStream!=self.STDOUTERR:
-                # only add the chars once a line is complete
-                for c in line:
-                    self._notifyChar(self.STDOUTERR,c)
-                self._notifyChar(self.STDOUTERR,'\n')
             lb.clear()
         else:
-            self._lineBuffers[whichStream].append(c)
+            self._currentLineBuffers[whichStream].append(c)
 
     def _notifyLine(self,whichStream:int,s:str)->None:
         """
@@ -530,7 +560,7 @@ class RecieveDataManager(RunCallbacks):
         Finish off any line buffers in case
         there was no newline at the end of the file
         """
-        for whichStream,lb in enumerate(self._lineBuffers):
+        for whichStream,lb in enumerate(self._currentLineBuffers):
             if lb:
                 self._notifyLine(whichStream,''.join(lb))
                 lb.clear()
@@ -544,7 +574,7 @@ class RecieveDataManager(RunCallbacks):
             codecs.getincrementaldecoder(self._stringFormat)(),
             codecs.getincrementaldecoder(self._stringFormat)())
         self._byteBuffers=(bytearray(),bytearray(),bytearray())
-        for lb in self._lineBuffers:
+        for lb in self._currentLineBuffers:
             lb.clear()
 
     def _notifyThreadLoop(self):

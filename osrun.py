@@ -106,7 +106,7 @@ class OsRun(RunCallbacks):
         :param ansiHandling: how to handle ansi escape codes
             "strip"(default), "preserve", or "html"
         """
-        RunCallbacks.__init__(self,runCallbacks)
+        RunCallbacks.__init__(self,runCallbacks=runCallbacks)
         self.ansiHandling=ansiHandling
         useParams:typing.List[str]=[]
         if cmd is not None \
@@ -142,6 +142,7 @@ class OsRun(RunCallbacks):
         self.showHidden=showHidden
         self.showMinimized=showMinimized
         self.showMaximized=showMaximized
+        self.chunkyIO=True # read io in chunks instead of single bytes
 
     @property
     def json(self)->str:
@@ -220,12 +221,7 @@ class OsRun(RunCallbacks):
         moreParams:typing.Optional[typing.Iterable[str]]=None,
         workingDirectory:typing.Union[None,str,Path]=None,
         maxWait:typing.Optional[float]=None,
-        callOnStdoutLine:typing.Optional[StringNotifies]=None,
-        callOnStderrLine:typing.Optional[StringNotifies]=None,
-        callOnStdoutErrLine:typing.Optional[StringNotifies]=None,
-        callOnStdoutChar:typing.Optional[StringNotifies]=None,
-        callOnStderrChar:typing.Optional[StringNotifies]=None,
-        callOnStdoutErrChar:typing.Optional[StringNotifies]=None
+        runCallbacks:typing.Optional[RunCallbacks]=None
         )->OsRunResult:
         """
         run the command and return the results
@@ -242,12 +238,7 @@ class OsRun(RunCallbacks):
         job=self.runAsync(
             moreParams,
             workingDirectory,
-            callOnStdoutLine,
-            callOnStderrLine,
-            callOnStdoutErrLine,
-            callOnStdoutChar,
-            callOnStderrChar,
-            callOnStdoutErrChar)
+            runCallbacks)
         ret=job.wait(maxWait)
         return ret
 
@@ -276,12 +267,7 @@ class OsRun(RunCallbacks):
     def runAsync(self,
         moreParams:typing.Optional[typing.Iterable[str]]=None,
         workingDirectory:typing.Union[None,str,Path]=None,
-        callOnStdoutLine:typing.Optional[StringNotifies]=None,
-        callOnStderrLine:typing.Optional[StringNotifies]=None,
-        callOnStdoutErrLine:typing.Optional[StringNotifies]=None,
-        callOnStdoutChar:typing.Optional[StringNotifies]=None,
-        callOnStderrChar:typing.Optional[StringNotifies]=None,
-        callOnStdoutErrChar:typing.Optional[StringNotifies]=None
+        runCallbacks:typing.Optional[RunCallbacks]=None
         )->OsRunJob:
         """
         run the command asynchronously
@@ -290,14 +276,9 @@ class OsRun(RunCallbacks):
 
         NOTE: if RunJob is garbage collected, the job itself will terminate
         """
-        job=OsRunJob(self)
-        job.assignCallbacks(self)
-        job.addCallOnStdoutLine(callOnStdoutLine)
-        job.addCallOnStderrLine(callOnStderrLine)
-        job.addCallOnStdoutErrLine(callOnStdoutErrLine)
-        job.addCallOnStdoutChar(callOnStdoutChar)
-        job.addCallOnStderrChar(callOnStderrChar)
-        job.addCallOnStdoutErrChar(callOnStdoutErrChar)
+        job=OsRunJob(self,runCallbacks=self)
+        job.chunkyIO=self.chunkyIO
+        job.extendCallbacks(runCallbacks)
         job.start(moreParams,workingDirectory)
         return job
 
