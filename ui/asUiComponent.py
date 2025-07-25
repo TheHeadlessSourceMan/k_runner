@@ -32,11 +32,14 @@ def asUiComponent(comp:UIComponentCompatible)->"UiComponent":
         if isinstance(comp,int):
             comp=UiComponent(comp)
         elif hasattr(comp,'hwnd'):
+            comp=typing.cast(ClassWithhwnd,comp)
             comp=asUiComponent(comp.hwnd)
         elif hasattr(comp,'hWnd'):
+            comp=typing.cast(ClassWithhWnd,comp)
             comp=asUiComponent(comp.hWnd)
         else:
             from .find import pidToHwnd
+            comp=typing.cast("ProcessCompatible",comp)
             comp=UiComponent(pidToHwnd(comp))
     return comp
 asComponent=asUiComponent

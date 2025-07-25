@@ -51,7 +51,7 @@ class CommandFailedOnMissingArgumentException(CommandFailedException):
 
 
 def commandTag(
-    cmdTag:typing.Union[URLCompatible,str,etree.Element],
+    cmdTag:typing.Union[URLCompatible,str,etree.ElementBase],
     **kwargs
     )->typing.Dict[str,osrun.OsRunResult]:
     """
@@ -135,11 +135,12 @@ def commandTag(
     Returns {id:OsRunResult}
     """ # noqa: E501 # pylint: disable=line-too-long
     if not etree.iselement(cmdTag):
+        cmdTag=typing.cast(typing.Union[URLCompatible,str],cmdTag)
         if not isinstance(cmdTag,str):
             # NOTE: a string is always an xml string, not a URL (for security)
             url:URL=typing.cast(URL,asURL(cmdTag))
             cmdTag=url.read()
-        cmdTag=etree.fromstring(cmdTag)
+        cmdTag=etree.fromstring(cmdTag,None)
     results:typing.Dict[str,osrun.OsRunResult]={}
     replacements=dict(**kwargs)
     def getReplacement(s:str)->str:
@@ -191,14 +192,14 @@ def commandTag(
                 if len(rr)>1 and rr[1]:
                     ret.append(rr[1])
         return ''.join(ret)
-    def processTag(el:etree.Element)->None:
+    def processTag(el:etree.ElementBase)->None:
         """
         Process/run a single <command> tag.
         (also runs all child tags)
 
         Results will be stored in the results dict by their <command id=""> id
         """
-        for child in el:
+        for child in el.getchildren():
             processTag(child)
         if el.tag=='command':
             cmd:str=stringReplacement(el.attrib['cmd'])

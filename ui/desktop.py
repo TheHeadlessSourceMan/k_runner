@@ -104,6 +104,8 @@ class UiDesktop:
         """
         Handle to the desktop
         """
+        if self._pyHDesk is None:
+            return 0
         return self._pyHDesk.handle
 
     @property
@@ -111,7 +113,7 @@ class UiDesktop:
         """
         Handle to the desktop window
         """
-        return self._pyHDesk.handle
+        return self.hDesktop
 
     @property
     def name(self)->str:
@@ -120,10 +122,12 @@ class UiDesktop:
         """
         return self.desktopName
 
-    def switchTo(self):
+    def switchTo(self)->None:
         """
         Make this the currently-selected desktop
         """
+        if self._pyHDesk is None:
+            raise IndexError("Desktop switching not available")
         self._pyHDesk.SwitchDesktop(self.hDesktop)
 
     @property

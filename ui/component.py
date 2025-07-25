@@ -1,6 +1,7 @@
 """
 A ui control comopnent
 """
+from pathlib import Path
 import typing
 import os
 import time
@@ -16,7 +17,7 @@ from .componentGroup import UiComponentGroup # noqa: E501 # pylint: disable=wron
 if typing.TYPE_CHECKING:
     from .asUiComponent import UIComponentCompatible
     from k_runner.processes.process import Process
-    import PIL
+    import PIL.Image
 
 
 class UiComponent(UiComponentGroup):
@@ -32,7 +33,10 @@ class UiComponent(UiComponentGroup):
         parentWindow:typing.Optional["UiComponent"]=None):
         """ """
         UiComponentGroup.__init__(self)
-        self.hWnd=hWnd
+        if not isinstance(hWnd,int):
+            from .asUiComponent import asUiComponent
+            hWnd=asUiComponent(hWnd).hWnd
+        self.hWnd:int=hWnd
         self._process:typing.Optional['Process']
         self._pid:typing.Optional[int]
         self.parentWindow=parentWindow
@@ -408,7 +412,13 @@ class UiComponent(UiComponentGroup):
         if os.name=='nt':
             return win32gui.GetWindowPlacement(self.hWnd)
         raise NotImplementedError(f'Not implemented on os="{os.name}"')
-    def setWindowLayout(self,layout:typing.Tuple[int,int,int,int])->None:
+    def setWindowLayout(self,
+        layout:typing.Tuple[
+            typing.Optional[int],
+            typing.Optional[int],
+            typing.Optional[int],
+            typing.Optional[int]]
+        )->None:
         """
         Get the layout of the window
         """
@@ -520,7 +530,7 @@ class UiComponent(UiComponentGroup):
         """
         if self._text is None:
             self._text=win32gui.GetWindowText(self.hWnd)
-        return self._text
+        return self._text # type: ignore
     @text.setter
     def text(self,text:typing.Any):
         self._text=None
@@ -705,6 +715,22 @@ class UiComponent(UiComponentGroup):
         self.minimize(oldMin)
         self.setTransparency(hWnd,oldTransparency==1)
         self.setMinimizeAnimation(hWnd,oldMinAnimation)
+        return img
+
+    def saveScreenshot(self,
+        file:typing.Union[str,Path,typing.IO[bytes]],
+        getChildren:bool=True
+        )->'PIL.Image.Image':
+        """
+        Save a screenshot of the component to file.
+
+        The file can be a binary buffer or filename.
+        """
+        img=self.capture(getChildren)
+        if isinstance(file,Path):
+            file=str(file)
+        else:
+            img.save(file)
         return img
 
     def __hash__(self)->int:

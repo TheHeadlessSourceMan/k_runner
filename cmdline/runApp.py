@@ -26,8 +26,10 @@ class RunApp():
         Run the given command line
         """
         # FN: runApp.run(cmd,onOutputCB=None,onErrorCB=None,hideWindows=False,priorityBoost=0,wDogOutput=None,wDogLifetime=None) # noqa: E501 # pylint: disable=line-too-long
+        from k_runner import Application,ApplicationCallbacks
+        callbacks=ApplicationCallbacks(onOutputCB,onErrorCB)
         app=Application()
-        app.run(cmd,onOutputCB,onErrorCB,
+        app.run(cmd,callbacks,
             hideWindows,priorityBoost,wDogOutput,wDogLifetime)
 
     def getVersion(self):

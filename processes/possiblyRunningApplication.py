@@ -3,7 +3,6 @@ Tools to check if a process is running, and if so,
 stop it, do something, then restart it.
 """
 import typing
-from collections.abc import Iterable
 import os
 from pathlib import Path
 import subprocess
@@ -52,8 +51,8 @@ class PossiblyRunningApplication:
         """
         if not isinstance(otherFilename,Path):
             otherFilename=Path(otherFilename)
-        otherFilename=otherFilename.absolute()
-        filename=self.application
+        otherFilename=str(otherFilename)
+        filename=str(self.application.absolute())
         if os.sep=='\\':
             # windows filenames are not case-sensitive
             otherFilename=otherFilename.lower()
@@ -62,7 +61,7 @@ class PossiblyRunningApplication:
             return True
         for filename in self.alsoLocks:
             if os.sep=='\\':
-                filename=filename.lower()
+                filename=Path(str(filename).lower())
             if filename==otherFilename:
                 return True
         return False
@@ -73,7 +72,7 @@ class PossiblyRunningApplication:
         everything stopped to self._stuffThatWeStopped
         """
         self._stuffThatWeStopped=[]
-        filename=self.application
+        filename=str(self.application)
         if os.sep=='\\':
             # windows filenames are not case-sensitive
             filename=filename.lower()
@@ -150,8 +149,8 @@ def temporarilyStopAllProcesses(
     else:
         if isinstance(runBeforeRestarting,str):
             runBeforeRestarting=[runBeforeRestarting]
-        elif not isinstance(runBeforeRestarting,Iterable):
-            runBeforeRestarting=[x for x in runBeforeRestarting]
+        else:
+            runBeforeRestarting=list(runBeforeRestarting)
         try:
             po=subprocess.Popen(runBeforeRestarting,
                 shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)

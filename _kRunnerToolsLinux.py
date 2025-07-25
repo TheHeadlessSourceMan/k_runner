@@ -6,8 +6,8 @@ import os
 import time
 import subprocess
 import threading
+import signal
 try:
-    import signal
     import pyev # type: ignore # noqa: F401,E501 # pylint: disable=import-error,unused-import,line-too-long
     hasPyEv=True
 except ImportError:
@@ -82,13 +82,13 @@ class Application:
         self.outputCounter=0.0
         self.wDogExitCode=-1077
 
-    def sendIn(self,data:str)->None:
+    def sendIn(self,data:str,encoding:str='utf-8')->None:
         """
         Send something to the program's standard input
         """
-        if self.process is None:
+        if self.process is None or self.process.stdin is None:
             raise Exception("Process not started")
-        self.process.stdin.write(data)
+        self.process.stdin.write(data.encode(encoding,errors="ignore"))
 
     def getShell(self)->str:
         """
@@ -112,7 +112,7 @@ class Application:
 
     def run(self,
         cmd:typing.Union[str,typing.Iterable[str]],
-        callbacks=None,
+        callbacks:typing.Optional[ApplicationCallbacks]=None,
         hideWindows:bool=False,
         priorityBoost:int=0,
         wDogOutput=None,
@@ -131,21 +131,20 @@ class Application:
             cmd.insert(0,self.runInShellCommandFlag)
             cmd.insert(0,self.getShell())
         if callbacks.stdoutLine is None:
-            def onOutput(app,out):
+            def onOutput(msg):
                 """
                 stdout callback
                 """
-                _=app
-                print(out)
+                print(msg)
             onOutputCB=onOutput
         else:
             onOutputCB=callbacks.stdoutLine
         if callbacks.stderrLine is None:
-            def onError(app,err):
+            def onError(msg:str):
                 """
                 stderr callback
                 """
-                print(("[ERR]",err))
+                print("[ERR] {err}")
                 # make sure we get all the error message then quit
                 app.wDogOutput=None
                 app.lifetimeCounter=0.0
@@ -187,16 +186,20 @@ class Application:
         threading.Thread(target=self._stdoutReadThread).start()
         # The stderr loop
         result=None
-        while result is None and self.returnCode is None:
+        while result is None \
+            and self.returnCode is None \
+            and self.process.stderr is not None:
             line=self.process.stderr.readline()
             if line is not None:
-                self.process.wDogTouch=True
+                setattr(self.process,'wDogTouch',True)
                 while line and (line[-1]=='\n' or line[-1]=='\r'):
                     line=line[0:-1]
-                    onErrorCB(self,line)
+                    onErrorCB(f'{self.name}:{line}')
             result=self.process.poll()
         if self.returnCode is None:
             self.returnCode=result
+        if self.returnCode is None:
+            return -9999
         return self.returnCode
 
     def _stdoutReadThread(self):
@@ -204,7 +207,11 @@ class Application:
         Thread to read stdout of a (POSIX) process
         """
         result=None
-        while result is None and self.returnCode is None:
+        while result is None \
+            and self.returnCode is None \
+            and self.process is not None \
+            and self.process.stdout is not None:
+            #
             line=self.process.stdout.readline()
             if line is not None:
                 self.wDogTouch=True
@@ -218,7 +225,10 @@ class Application:
         """
         Thread to monitor a (POSIX) process for lockups
         """
-        while self.process.poll() is None and self.returnCode is None:
+        while self.process is not None \
+            and self.process.poll() is None \
+            and self.returnCode is None:
+            #
             if self.hideWindows:
                 # Sadly,we can't specify window visibility on startup (yet).
                 # We'll just have to watch for new windows

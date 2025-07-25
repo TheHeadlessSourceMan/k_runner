@@ -23,16 +23,18 @@ ProcessCompatible=typing.Union[
     int,"Process",ClassWithPid,ClassWithProcess,psutil.Process]
 
 
-def asProcess(proc:ProcessCompatible):
+def asProcess(proc:ProcessCompatible)->"Process":
     """
     Always return a Process
     """
     from .process import Process
     if not isinstance(proc,Process):
         if isinstance(proc,int):
-            proc=Process(int)
+            proc=Process(proc)
         elif hasattr(proc,'pid'):
-            proc=asProcess(proc.pid)
+            proc=asProcess(proc.pid) # type: ignore
         elif hasattr(proc,'process'):
-            proc=asProcess(proc.process)
+            proc=asProcess(proc.process) # type: ignore
+        else:
+            raise TypeError(f'Unable to convert {proc.__class__.__name__} to Process')
     return proc

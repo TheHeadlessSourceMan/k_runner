@@ -7,6 +7,8 @@ import re
 if os.name=='nt':
     import win32process
     import win32gui
+if typing.TYPE_CHECKING:
+    from processes.asProcess import ProcessCompatible
 from .window import Window # pylint: disable=wrong-import-position
 
 
@@ -25,7 +27,7 @@ def allTopLevelHwnds()->typing.Iterable[int]:
 
 
 def getTopLevelWindows(
-    matching:typing.Pattern=None
+    matching:typing.Optional[typing.Pattern[str]]=None
     )->typing.Generator[Window,None,None]:
     """
     Get all the application windows matching a given pattern
@@ -45,7 +47,7 @@ def getTopLevelWindows(
 
 
 def findWindows(
-    title:typing.Union[None,str,typing.Pattern]=None,
+    title:typing.Union[None,str,typing.Pattern[str]]=None,
     visible:typing.Optional[bool]=None,
     location:typing.Optional[tuple[int,int]]=None,
     recursive:bool=False,
@@ -89,15 +91,18 @@ def findWindows(
             if isinstance(title,str):
                 if not txt.lower().find(title):
                     continue
-            if title.match(txt) is None:
+            elif title.match(txt) is None:
                 continue
         yield Window(hWnd)
 
 
-def pidToHwnds(pid:int)->typing.Iterable[int]:
+def pidToHwnds(pid:"ProcessCompatible")->typing.Iterable[int]:
     """
     Get all top-level window handles for a process id
     """
+    if not isinstance(pid,int):
+        from processes.asProcess import asProcess
+        pid=int(asProcess(pid))
     if os.name=='nt':
         for hWnd in allTopLevelHwnds():
             _,windowPid=win32process.GetWindowThreadProcessId(hWnd)
@@ -107,7 +112,7 @@ def pidToHwnds(pid:int)->typing.Iterable[int]:
         raise NotImplementedError('Need to implement for this os')
 
 
-def pidToHwnd(pid:int)->int:
+def pidToHwnd(pid:"ProcessCompatible")->int:
     """
     Get the main window handle for a process id
 

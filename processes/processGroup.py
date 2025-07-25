@@ -17,7 +17,7 @@ class ProcessGroup:
         if processes is None:
             processes=[]
         elif not hasattr(processes,'__iter__'):
-            processes=(processes,)
+            processes=(asProcess(processes),)
         self._procs:typing.Set[Process]=set([asProcess(p) for p in processes])
 
     def watchProcessesEnd(self,
@@ -41,7 +41,8 @@ class ProcessGroup:
             time.sleep(pollingInterval)
             for process in self._procs:
                 if not process.is_running():
-                    fn(process)
+                    if fn is not None:
+                        fn(process)
                     self._procs.remove(process)
 
     def dropEndedProcesses(self)->typing.Iterable[Process]:

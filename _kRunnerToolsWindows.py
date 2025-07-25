@@ -152,7 +152,8 @@ class Application:
             0,# in buffer size
             0,# timeout
             None)
-        overlapped=pywintypes.OVERLAPPED() # pylint: disable=no-member
+        overlapped=pywintypes.OVERLAPPED() # pylint: disable=no-member 
+
         overlapped.hEvent=win32event.CreateEvent(None,1,0,None)
         win32pipe.ConnectNamedPipe(openscadInputPipe,overlapped)
         def _writer():
@@ -164,9 +165,10 @@ class Application:
                     return
                 except Exception as e:
                     if hasattr(e,'winerror'):
-                        if e.winerror==536:
+                        if e.winerror==536: # type: ignore
                             pass
-                        elif e.winerror==233: # process disconnected
+                        elif e.winerror==233: # type: ignore
+                            # process disconnected
                             break
                         else:
                             raise e
@@ -196,7 +198,7 @@ class Application:
                     self._imgData=data
                 except Exception as e:
                     if hasattr(e,'winerror'):
-                        if e.winerror==536:
+                        if e.winerror==536: # type: ignore
                             pass
                         else:
                             raise e
@@ -227,7 +229,8 @@ class Application:
         """
         Send something to the program's standard input
         """
-        self.process.stdin.write(data)
+        if self.process is not None:
+            self.process.stdin.write(data)
 
     def getShell(self)->str:
         """
@@ -240,7 +243,7 @@ class Application:
 
     def run(self,
         cmd:str,
-        callbacks:ApplicationCallbacks=None,
+        callbacks:typing.Optional[ApplicationCallbacks]=None,
         hideWindows:bool=False,
         priorityBoost:int=0,
         wDogOutput=None,
@@ -257,6 +260,8 @@ class Application:
         """
         onOutputCB=None
         onErrorCB=None
+        if callbacks is None:
+            callbacks=ApplicationCallbacks()
         if not isinstance(cmd,str):
             cmd=' '.join(cmd)
         if self.runInShell is not None:

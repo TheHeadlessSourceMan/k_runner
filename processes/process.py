@@ -21,8 +21,7 @@ try:
 except ImportError:
     ProgramDebugInfo=typing.Any
     hasDebuggerManager=False
-from .asProcess import ( # noqa: E402 # pylint: disable=wrong-import-position
-    ProcessCompatible,asProcess)
+from .asProcess import ProcessCompatible # noqa: E402 # pylint: disable=wrong-import-position
 if typing.TYPE_CHECKING:
     from k_runner.ui.window import Window
     from cmdline.commandLine import CommandLine
@@ -41,7 +40,12 @@ class Process(psutil.Process):
     Only time and testing will tell whether this is suitable as-is.
     """
     def __init__(self,pid:ProcessCompatible):
-        psutil.Process.__init__(int(asProcess(pid)))
+        if hasattr(pid,'process'):
+            pid=pid.process # type: ignore
+        if hasattr(pid,'pid'):
+            pid=pid.pid # type: ignore
+        pid=int(pid) # type: ignore
+        psutil.Process.__init__(self,pid)
         self._name:typing.Optional[str]=None
         self._programDebugInfo:typing.Optional[typing.Any]=None
 
@@ -134,8 +138,8 @@ class Process(psutil.Process):
         if there is one.
         """
         if hasDebuggerManager and self._programDebugInfo is None:
-            self._programDebugInfo=\
-                debuggerManager.DebuggerManager.getProgramDebugInfo(self.name)
+            dm=debuggerManager.DebuggerManager # type: ignore
+            self._programDebugInfo=dm.getProgramDebugInfo(self.name)
         return self._programDebugInfo
     @programDebugInfo.setter
     def programDebugInfo(self,
@@ -168,7 +172,7 @@ class Process(psutil.Process):
                         win32con.PROCESS_QUERY_INFORMATION|win32con.PROCESS_VM_READ, # noqa: E501
                         False,self.pid)
                     self._name=win32process.GetModuleFileNameEx(handle,0)
-                except pywintypes.error as e: # pylint: disable = no-member
+                except pywintypes.error as e: # type: ignore # pylint: disable = no-member
                     if onError==Exception:
                         raise e
                     self._name=onError
@@ -177,7 +181,8 @@ class Process(psutil.Process):
                 if not self._name:
                     self._name=''
         return self._name
-    def name(self)->str:
+    @property
+    def name(self)->str: # type: ignore # pylint: disable=invalid-overridden-method # noqa: E501
         """
         Gets the name of the process by pid
         """
@@ -245,7 +250,8 @@ class Process(psutil.Process):
         Get the process priority as a percent
         where 1.0 is the max priority of 100%
         """
-        return self.niceToPriority(self.nice())
+        nice=float(self.nice()) # type: ignore
+        return self.niceToPriority(nice)
 
     @property
     def priority(self)->float:

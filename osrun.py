@@ -6,7 +6,7 @@ import os
 import sys
 from pathlib import Path
 import json
-from k_runner.dataRecievedCallbacks import StringNotifies,RunCallbacks
+from k_runner.dataRecievedCallbacks import RunCallbacks
 from k_runner.processes.priority import MEDIUM_PRIORITY
 from k_runner.commandLine import commandlineSplit
 from k_runner.osRunResult import OsRunResult

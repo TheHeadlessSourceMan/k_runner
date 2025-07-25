@@ -42,6 +42,8 @@ def findSystemProcesses(
         if hasFileOpen is not None:
             if not proc.hasFileOpen(hasFileOpen):
                 continue
+        # Looks good!
+        yield proc
 
 def getHwndsByPid(pid:int,visibleOnly:bool=True)->typing.Iterable[int]:
     """
