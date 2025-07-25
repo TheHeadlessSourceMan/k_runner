@@ -9,7 +9,7 @@ class OsRunException(Exception):
     Thrown when there is a problem running a given command
     """
     def __init__(self,
-        cmd:typing.List[str],
+        cmd:typing.Iterable[str],
         cause:typing.Optional[Exception]=None):
         """ """
         self.cmd=cmd

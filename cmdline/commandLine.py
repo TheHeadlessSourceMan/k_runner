@@ -4,12 +4,17 @@ This is helper for creating function calls that run command line
 programs
 """
 import typing
+import os
+from pathlib import Path
 from paths import asUrl,UrlCompatible
 from .helpfiles import HelpSystemEntry
 from .asCommandLine import CommandLineCompatible
+from .commandLineStringHelpers import commandlineSplit
+if typing.TYPE_CHECKING:
+    from k_runner import OsRunJob,OsRunResult
 
 
-class CommandLineWrapper(HelpSystemEntry):
+class CommandLineParameterInfo(HelpSystemEntry):
     """
     A tool to create function calls from command line apps
     """
@@ -134,9 +139,246 @@ class CommandLineWrapper(HelpSystemEntry):
             return True
         print('ERR: No data found.  File not saved.')
         return False
-CommandLine=CommandLineWrapper
-CmdLine=CommandLineWrapper
-CmdLineWrapper=CommandLineWrapper
+CmdLineParameterInfo=CommandLineParameterInfo
+
+
+
+class ArgView:
+    """
+    Just the args to a program, that is
+    argv only without the program name.
+    """
+    def __init__(self,allArgs:"CommandLineArguments"):
+        self.allArgs=allArgs
+
+    def __iter__(self):
+        """
+        Access like an array of parameter strings
+        """
+        return self.allArgs[1:]
+
+    def __len__(self):
+        """
+        Access like an array of parameter strings
+        """
+        return len(self.allArgs)-1
+
+    @typing.overload
+    def __getitem__(self,idx:slice)->typing.Iterable[str]:
+        """
+        Access like an array of parameter strings
+        """
+    @typing.overload
+    def __getitem__(self,idx:int)->str:
+        """
+        Access like an array of parameter strings
+        """
+    def __getitem__(self,
+        idx:typing.Union[int,slice]
+        )->typing.Iterable[str]:
+        """
+        Access like an array of parameter strings
+        """
+        if isinstance(idx,slice):
+            idx=slice(idx.start+1,idx.stop+1,idx.step)
+        else:
+            idx+=1
+        return self.allArgs[idx]
+
+    def __setitem__(self,idx:int,val:str)->None:
+        """
+        Access like an array of parameter strings
+        """
+        self.allArgs[idx+1]=val
+
+    def __delitem__(self,idx:int)->None:
+        """
+        Access like an array of parameter strings
+        """
+        del self.allArgs[idx+1]
+
+
+class CommandLineArguments:
+    """
+    Wrap command line arguments in a more useful way
+    """
+    def __init__(self,
+        *manyArgs:typing.ParamSpecArgs,
+        invalidOsChars:typing.Union[str,typing.Iterable[str],None]=None):
+        """ """
+        self._argv:typing.List[str]=[]
+        if invalidOsChars is None:
+            invalidOsChars=os.name
+        if isinstance(invalidOsChars,str):
+            if invalidOsChars=='nt':
+                # TODO: do this better
+                invalidOsChars=('&','|',';','@')
+            else:
+                invalidOsChars=('&','|',';','@')
+        self.invalidOsChars:typing.Iterable[str]=invalidOsChars
+        for args in manyArgs: # type: ignore
+            self.append(args) # type: ignore
+
+    @property
+    def args(self)->ArgView:
+        """
+        Just the args
+        (that is, without the program name)
+        
+        You can still modify them and the
+        results will be reflected in the output
+        """
+        return ArgView(self)
+
+    @property
+    def parameterInfo(self)->CommandLineParameterInfo:
+        """
+        Try and find informa
+        """
+        return CommandLineParameterInfo(self)
+
+    def __iter__(self)->typing.Iterable[str]:
+        """
+        Access like an array of parameter strings
+        """
+        return iter(self._argv)
+
+    def __len__(self)->int:
+        """
+        Access like an array of parameter strings
+        """
+        return len(self._argv)
+
+    @typing.overload
+    def __getitem__(self,idx:slice)->typing.Iterable[str]:
+        """
+        Access like an array of parameter strings
+        """
+    @typing.overload
+    def __getitem__(self,idx:int)->str:
+        """
+        Access like an array of parameter strings
+        """
+    def __getitem__(self,
+        idx:typing.Union[int,slice]
+        )->typing.Iterable[str]:
+        """
+        Access like an array of parameter strings
+        """
+        return self._argv[idx]
+
+    def __setitem__(self,idx:int,val:str)->None:
+        """
+        Access like an array of parameter strings
+        """
+        self._argv[idx]=val
+
+    def __delitem__(self,idx:int)->None:
+        """
+        Access like an array of parameter strings
+        """
+        del self._argv[idx]
+
+    def runAsync(self)->"OsRunJob":
+        """
+        Generally speaking, this is backwards and you
+        should osRun(commandline) instead.
+        """
+        from k_runner import OsRun
+        job=OsRun(self).runAsync()
+        return job
+
+    def run(self)->"OsRunResult":
+        """
+        Generally speaking, this is backwards and you
+        should osRun(commandline) instead.
+        """
+        from k_runner import OsRun
+        result=OsRun(self).run()
+        return result
+    __call__=run
+
+    @property
+    def name(self)->str:
+        """
+        The name of the executable
+        """
+        if not self._argv:
+            return ''
+        return self._argv[0]
+    @name.setter
+    def name(self,name:str):
+        if not self._argv:
+            self._argv.append(name)
+        else:
+            self._argv[0]=name
+
+    def append(self,args:typing.Union[CommandLineCompatible,None]=None):
+        """
+        Add more arguments to the command line
+        """
+        if hasattr(args,'args') and not isinstance(args,CommandLine):
+            args=args.args # type: ignore
+        if isinstance(args,Path):
+            args=str(args)
+        elif isinstance(args,str):
+            p,a=commandlineSplit(args)
+            args=[p]
+            args.extend(a)
+        if not isinstance(args,(list,tuple,CommandLine)):
+            raise NotImplementedError(f'WARN: coercing type "{args.__class__.__name__}" to a command line is not yet supported!') # noqa: E501 # pylint: disable=line-too-long
+        for arg in args:
+            self._argv.append(arg) # type: ignore
+    extend=append
+
+    def assign(self,args:typing.Union[CommandLineCompatible,None]=None):
+        """
+        Change the arguments
+        """
+        self.clear()
+        self.append(args)
+
+    def clear(self)->None:
+        """
+        Clear the arguments
+        """
+        self._argv.clear()
+
+    def asString(self)->str:
+        """
+        Get as a string
+        """
+        args=[self._enquote(self._shellEscape(arg)) for arg in self._argv]
+        return ' '.join(args)
+    toString=asString
+
+    def _enquote(self,s:str)->str:
+        if ' ' in s:
+            s=s.replace('\\\\','\\').replace('"','\\"')
+            return f'"{s}"'
+        return s
+
+    def _shellEscape(self,s:str)->str:
+        """
+        Shell escape the args
+        """
+        for c in self.invalidOsChars:
+            s=s.replace(c,'\\'+c)
+        return s
+
+    def encodeToArray(self)->typing.List[str]:
+        """
+        In preparation for calling, this encodes all of the
+        values to an array of shell-escaped values.
+        """
+        return [self._shellEscape(v) for v in self._argv]
+
+    def __repr__(self)->str:
+        return self.asString()
+
+
+CommandLine=CommandLineArguments
+CmdLine=CommandLineArguments
 
 
 def main(args:typing.Iterable[str])->int:
@@ -194,7 +436,7 @@ def main(args:typing.Iterable[str])->int:
         print('\t... same goes for text files:')
         print('\t\tcmdlinewrapper.py --out=.py ls README.txt')
         return -1
-    wrapper=CmdLineWrapper(cmd)
+    wrapper=CmdLineParameterInfo(cmd)
     wrapper.getCommandLineOptions(' '.join(infoFrom))
     for o in out:
         extn=o.rsplit('.',1)

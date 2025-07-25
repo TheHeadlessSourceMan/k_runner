@@ -3,7 +3,8 @@ A group of processes
 """
 import typing
 from pathlib import Path
-from .process import Process,ProcessCompatible,asProcess
+from .process import Process
+from .asProcess import ProcessCompatible,asProcess
 if typing.TYPE_CHECKING:
     from k_runner.ui.window import Window
 
@@ -13,12 +14,12 @@ class ProcessGroup:
     """
     def __init__(self,
         processes:typing.Union[None,
-            ProcessCompatible,typing.List[ProcessCompatible]]=None):
-        if processes is None:
-            processes=[]
-        elif not hasattr(processes,'__iter__'):
-            processes=(asProcess(processes),)
-        self._procs:typing.Set[Process]=set([asProcess(p) for p in processes])
+            ProcessCompatible,
+            typing.Iterable[ProcessCompatible]]=None):
+        """ """
+        self._procs:typing.Set[Process]=set[Process]()
+        if processes is not None:
+            self.append(processes)
 
     def watchProcessesEnd(self,
         fn:typing.Optional[typing.Callable[[Process],None]]=None,
@@ -119,7 +120,7 @@ class ProcessGroup:
             if hasFileOpen is not None:
                 if not process.hasFileOpen(hasFileOpen):
                     continue
-            yield Process
+            yield process
 
     def kill(self)->None:
         """
@@ -204,16 +205,18 @@ class ProcessGroup:
 
     def append(self,
         processes:typing.Union[None,
-            ProcessCompatible,typing.List[ProcessCompatible]]=None
+            ProcessCompatible,typing.Iterable[ProcessCompatible]]=None
         )->None:
         """
         Add more processes to the list
         """
         if processes is None:
-            processes=[]
-        elif not hasattr(processes,'__iter__'):
+            return
+        if not hasattr(processes,'__iter__'):
+            processes=typing.cast(ProcessCompatible,processes)
             processes=(processes,)
-        self._procs.union([asProcess(p) for p in processes])
+        typing.cast(typing.Iterable[ProcessCompatible],processes)
+        self._procs=self._procs.union([asProcess(p) for p in processes]) # type: ignore
     add=append
     extend=append
 

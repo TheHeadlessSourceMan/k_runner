@@ -6,7 +6,7 @@ from pathlib import Path
 if typing.TYPE_CHECKING:
     from k_runner.processes import ProcessCompatible
     from k_runner.ui import UiComponentCompatible
-    from .commandLine import CommandLineWrapper
+    from .commandLine import CommandLine
 
 
 class ClassWithCmdline(typing.Protocol):
@@ -18,18 +18,18 @@ class ClassWithCmdline(typing.Protocol):
 
 CommandLineCompatible=typing.Union[
     str,Path,typing.Iterable[typing.Union[str,Path]],
-    "CommandLineWrapper","ProcessCompatible","UiComponentCompatible"]
+    "CommandLine","ProcessCompatible","UiComponentCompatible"]
 
 
 def asCommandLine(
     cmdline:CommandLineCompatible
-    )->"CommandLineWrapper":
+    )->"CommandLine":
     """
     Always return a CommandLine
     """
-    from .commandLine import CommandLineWrapper
-    if not isinstance(cmdline,CommandLineWrapper):
+    from .commandLine import CommandLine
+    if not isinstance(cmdline,CommandLine):
         if hasattr(cmdline,'cmdline'):
             return asCommandLine(cmdline)
-        cmdline=CommandLineWrapper(cmdline)
+        cmdline=CommandLine(cmdline)
     return cmdline

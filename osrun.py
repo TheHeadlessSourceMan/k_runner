@@ -8,9 +8,9 @@ from pathlib import Path
 import json
 from k_runner.dataRecievedCallbacks import DataRecievedCallbacks
 from k_runner.processes.priority import MEDIUM_PRIORITY
-from k_runner.cmdline import commandlineSplit
 from k_runner.osRunResult import OsRunResult
 from k_runner.osRunJob import OsRunJob
+from k_runner.cmdline import CommandLineCompatible,CommandLine
 
 
 class OsRun(DataRecievedCallbacks):
@@ -81,12 +81,10 @@ class OsRun(DataRecievedCallbacks):
     """
 
     def __init__(self,
-        cmd:typing.Union[str,typing.Iterable[str]],
-        params:typing.Optional[typing.Iterable[str]]=None,
+        cmd:CommandLineCompatible,
         shell:bool=False,
         detach:bool=False,
         debug:bool=False,
-        cmdLineSplit:typing.Optional[bool]=None,
         workingDirectory:typing.Union[None,str,Path]=None,
         env:typing.Optional[typing.Dict[str,typing.Any]]=None,
         runCallbacks:typing.Optional[DataRecievedCallbacks]=None,
@@ -109,27 +107,9 @@ class OsRun(DataRecievedCallbacks):
         DataRecievedCallbacks.__init__(self,runCallbacks=runCallbacks)
         self.ansiHandling=ansiHandling
         useParams:typing.List[str]=[]
-        if cmd is not None \
-            and hasattr(cmd,'__iter__') \
-            and not isinstance(cmd,str):
-            #
-            cmd=list(cmd)
-            # they mistakenly sent in all args in the cmd
-            if len(cmd)>1:
-                params=cmd[1:]
-            cmd=cmd[0]
-        if cmdLineSplit is None:
-            if params is None:
-                cmd,useParams=commandlineSplit(cmd)
-        elif cmdLineSplit:
-            cmd,useParams=commandlineSplit(cmd)
-        if not isinstance(cmd,str):
-            cmd,useParams=commandlineSplit(cmd)
-        if params is not None:
-            useParams.extend(params)
         self.priority=priority
         self.params:typing.List[str]=useParams # params to pass to the command
-        self.cmd:str=cmd # command to run
+        self.cmd:CommandLine=CommandLine(cmd) # command to run
         self.shell:bool=shell # run in the system shell environment (slower and usually unnecessary) # noqa: E501 # pylint: disable=line-too-long
         self.detach:bool=detach # detach from this process/run in background
         self.debug:bool=debug # print the command input and output for debugging # noqa: E501 # pylint: disable=line-too-long
@@ -142,7 +122,7 @@ class OsRun(DataRecievedCallbacks):
         self.showHidden=showHidden
         self.showMinimized=showMinimized
         self.showMaximized=showMaximized
-        self.chunkyIO=True # read io in chunks instead of single bytes
+        self.chunkyIO=False # read io in chunks instead of single bytes
 
     @property
     def json(self)->str:
@@ -344,8 +324,7 @@ class OsRun(DataRecievedCallbacks):
 
 
 def osrun(
-    cmd:typing.Union[str,typing.Iterable[str]],
-    params:typing.Optional[typing.Iterable[str]]=None,
+    cmd:CommandLineCompatible,
     shell:bool=False,
     detach:bool=False,
     debug:bool=False,
@@ -356,13 +335,14 @@ def osrun(
     )->OsRunResult:
     """ shortcut for OsRun().run(...) """
     return OsRun(cmd,
-        params,shell,
-        detach,debug,
-        cmdLineSplit,
+        shell,
+        detach,
+        debug,
         workingDirectory,
         env,
         runCallbacks).run()
 run=osrun
+
 
 def cmdline(args:typing.Iterable[str])->int:
     """
@@ -375,7 +355,7 @@ def cmdline(args:typing.Iterable[str])->int:
     useIter=True # whether to iterate on each line or dump them all at the end
     dashMode=False
     dashModeCmd=''
-    dashModeArgs=[]
+    dashModeArgs:typing.List[str]=[]
     for arg in args:
         if dashMode:
             if arg:
@@ -416,9 +396,10 @@ def cmdline(args:typing.Iterable[str])->int:
                 results=osr(maxWait=maxWait)
                 print(results)
     if dashMode:
+        args=[dashModeCmd]
+        args.extend(dashModeArgs)
         osr=OsRun(
-            dashModeCmd,
-            dashModeArgs,
+            args,
             shell=shell,
             detach=detach,
             debug=False)

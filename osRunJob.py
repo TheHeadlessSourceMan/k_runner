@@ -15,6 +15,7 @@ from .dataRecievedCallbacks import DataRecievedCallbacks
 from .osRunResult import OsRunResult
 from .dataRecievedCallbacks import RecieveDataManager
 from .processes.priority import MEDIUM_PRIORITY,_getWindowsPriorityName
+from .cmdline import CommandLine
 if typing.TYPE_CHECKING:
     from osrun import OsRun
 
@@ -41,7 +42,7 @@ class OsRunJob(RecieveDataManager):
             # keep a copy in case they change it
             self.workingDirectory=Path(osRun.workingDirectory)
         self.osRun=osRun
-        self.chunkyIO=True
+        self.chunkyIO=False
 
     @property
     def pid(self)->typing.Optional[int]:
@@ -116,7 +117,7 @@ class OsRunJob(RecieveDataManager):
                 workingDirectory=self.workingDirectory
         else:
             workingDirectory=Path(workingDirectory).absolute()
-        cmd:typing.List[str]=[self.osRun.cmd]
+        cmd:CommandLine=CommandLine(self.osRun.cmd)
         cmd.extend(self.osRun.params)
         if moreParams is not None:
             cmd.extend(moreParams)
@@ -146,7 +147,7 @@ class OsRunJob(RecieveDataManager):
                 if not cmdPath.is_file():
                     cmdPath=Path(cmd[0])
                 winPri=_getWindowsPriorityName(self.osRun.priority)
-                newCmd=['start','',f'/{winPri}',str(cmdPath)]
+                newCmd=CommandLine(('start','',f'/{winPri}',str(cmdPath)))
                 if len(cmd)>1:
                     newCmd.extend(cmd[1:])
                 cmd=newCmd
@@ -169,7 +170,7 @@ class OsRunJob(RecieveDataManager):
         else:
             startupinfo=None
         if self.osRun.debug:
-            print('$> ',' '.join(cmd))
+            print(f'$> {cmd}')
         try:
             # NOTE: the following throws a warning message,
             # thus the workaround below.
@@ -179,7 +180,8 @@ class OsRunJob(RecieveDataManager):
             #    shell=self.osRun.shell,
             #    stdout=subprocess.PIPE,stderr=subprocess.PIPE,
             #    bufsize=1,creationflags=creationflags,cwd=workingDirectory)
-            self._popen=subprocess.Popen(cmd,
+            self._popen=subprocess.Popen(
+                cmd.encodeToArray(),
                 shell=self.osRun.shell,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -190,7 +192,7 @@ class OsRunJob(RecieveDataManager):
                 startupinfo=startupinfo
                 )
         except Exception as e:
-            raise OsRunException(cmd,e) from e
+            raise OsRunException(cmd,e) from e # type: ignore
         if self.chunkyIO:
             try:
                 # If this api is available, we probably need to call it

@@ -6,6 +6,11 @@ from .kRunnerTools import *
 from .pyErrRun import *
 from .runPythonFile import *
 from .runSomething import *
+from .osrun import *
+from .osRunJob import *
+from .osRunResult import *
+from .dataRecievedCallbacks import *
+
 from .cmdline import *
 
 from .ui import *

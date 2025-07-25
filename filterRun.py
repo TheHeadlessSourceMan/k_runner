@@ -3,6 +3,8 @@ Extension of osrun to filter the execution output
 """
 import typing
 import re
+from cmdline.asCommandLine import CommandLineCompatible
+from cmdline.commandLine import CommandLine
 from k_runner.osrun import OsRun
 
 
@@ -12,19 +14,12 @@ class FilterRun:
     """
 
     def __init__(self,
-        cmd:str,
-        params:typing.Optional[typing.Iterable[str]]=None,
+        cmd:CommandLineCompatible,
         shell:bool=False,
         detach:bool=False,
-        debug:bool=False,
-        cmdLineSplit:typing.Optional[bool]=None):
-        """
-        :param cmdLineSplit: how and when to split cmd parameter
-            if True will always attempt to split cmd into params
-            if False will not
-            if None (default) will only attempt if params[] is None
-        """
-        self.osrun=OsRun(cmd,params,shell,detach,debug,cmdLineSplit)
+        debug:bool=False):
+        """ """
+        self.osrun=OsRun(cmd,shell,detach,debug)
         self.filterOut:typing.List[typing.Pattern]=[]
 
     def addFilter(self,
@@ -139,8 +134,9 @@ def cmdline(args:typing.Iterable[str])->int:
                 results=osr(maxWait=maxWait)
                 print(results)
     if dashMode:
-        osr=FilterRun(
-            dashModeCmd,dashModeArgs,shell=shell,detach=detach,debug=False)
+        cmd=CommandLine(dashModeCmd)
+        cmd.extend(dashModeArgs)
+        osr=FilterRun(cmd,shell=shell,detach=detach,debug=False)
         if useIter:
             for line in osr:
                 print(line)

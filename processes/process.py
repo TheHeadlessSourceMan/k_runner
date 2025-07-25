@@ -90,12 +90,13 @@ class Process(psutil.Process):
         Get the command line
         """
         return self.commandLine
-    def cmdline(self)->"CommandLine":
+    @property
+    def cmdline(self)->"CommandLine": # type: ignore # pylint: disable=invalid-overridden-method,line-too-long # noqa: E501
         """
         Get the command line.
 
-        NOTE: this is a function in order to
-        keep it compatible with psutil.Process
+        NOTE: this is a getter not a function
+        making it incompatible with psutil.Process
         """
         return self.commandLine
 
@@ -173,13 +174,15 @@ class Process(psutil.Process):
                         False,self.pid)
                     self._name=win32process.GetModuleFileNameEx(handle,0)
                 except pywintypes.error as e: # type: ignore # pylint: disable = no-member
-                    if onError==Exception:
+                    if isinstance(onError,Exception):
                         raise e
                     self._name=onError
             else:
                 self._name=super().name()
                 if not self._name:
                     self._name=''
+        if self._name is None:
+            return ''
         return self._name
     @property
     def name(self)->str: # type: ignore # pylint: disable=invalid-overridden-method # noqa: E501
@@ -330,22 +333,27 @@ class Process(psutil.Process):
 
     def cmdlineMatches(self,
         other:typing.Union[
-            str,Path,typing.Pattern,typing.Iterable[str],"Process"]
+            str,Path,typing.Pattern[str],typing.Iterable[str],"Process"]
         )->bool:
         """
         Test if the command line for this process matches a given
         executable name, regex, or all commandline parameters
         """
+        exe=Path(os.path.expandvars(str(self.exe))).absolute()
+        if hasattr(other,'match'):
+            other=typing.cast(typing.Pattern[str],other)
+            m=other.match(exe) # type: ignore
+            return m is not None
         if isinstance(other,Process):
-            other=other.cmdline
+            other=str(other.cmdline)
         if isinstance(other,(str,Path)):
             if isinstance(other,str):
                 other=Path(os.path.expandvars(other)).absolute()
-            return Path(self.exe)==other
-        if hasattr(other,'match'):
-            return other.match(self.exe)
+            return exe==other
         isSame=True
-        for e1,e2 in other,self.cmdline:
+        other=typing.cast(typing.Iterable[str],other)
+        ourCmd=typing.cast(typing.Iterable[str],self.cmdline)
+        for e1,e2 in other,ourCmd:
             if e1!=e2:
                 isSame=False
                 break
@@ -425,7 +433,7 @@ class Process(psutil.Process):
         """
         return self.getWindow()
 
-    def getProcessHwnds(self)->typing.Iterable[str]:
+    def getProcessHwnds(self)->typing.Iterable[int]:
         """
         Get all top-level windows associated with
         the process being debugged
@@ -433,14 +441,14 @@ class Process(psutil.Process):
         from .find import pidToHwnds
         return pidToHwnds(self.pid)
     @property
-    def hWnds(self)->typing.Iterable[str]:
+    def hWnds(self)->typing.Iterable[int]:
         """
         Get all top-level windows associated with
         the process being debugged
         """
         return self.getProcessHwnds()
 
-    def getProcessHwnd(self)->str:
+    def getProcessHwnd(self)->int:
         """
         Get main top-level window associated with
         the process being debugged
@@ -450,7 +458,7 @@ class Process(psutil.Process):
         from .find import pidToHwnd
         return pidToHwnd(self.pid)
     @property
-    def hWnd(self)->str:
+    def hWnd(self)->int:
         """
         Get the main top-level window associated with
         the process being debugged
