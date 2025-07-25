@@ -14,6 +14,7 @@ if os.name=='nt':
     import win32process
     from ctypes import windll
 from .componentGroup import UiComponentGroup # noqa: E501 # pylint: disable=wrong-import-position
+from .keyboardKeys import sendKeyboardKey,sendKeyboardKeys # noqa: E501 # pylint: disable=wrong-import-position
 if typing.TYPE_CHECKING:
     from .asUiComponent import UIComponentCompatible
     from k_runner.processes.process import Process
@@ -244,34 +245,53 @@ class UiComponent(UiComponentGroup):
         else:
             raise NotImplementedError()
 
-    def sendKeys(self,
-        keys:str,
-        alt:bool=False,
-        ctrl:bool=False,
-        shift:bool=False,
-        meta:bool=False
+    def sendKeyboardKeys(self,
+        keyStream:str,
+        inBackground:bool=False,
+        timeDelaySec:float=0.05
+        )->None:
+        r"""
+        Send keyboard keys to the component
+
+        :keyStream: Supports:
+            Normal letters
+            special keys "[UP_ARROW]"
+            meta keys "[CTRL+C]"
+            and "[" key via "\["
+        :inBackground: Attempt to send to a background
+            window without making it foreground first. This
+            is unreliable due to windows limitations, but
+            could be nice in some cases.
+        :timeDelaySec: Time delay between keypresses
+        """
+        sendKeyboardKeys(keyStream,self.hWnd,inBackground,timeDelaySec)
+    sendKeyboard=sendKeyboardKeys
+    pressKeys=sendKeyboardKeys
+    sendKeys=sendKeyboardKeys
+
+    def sendKeyboardKey(self,
+        keyCode:typing.Union[int,str],
+        inBackground:bool=False
         )->None:
         """
-        TODO: this mostly kinda works, but, for instance if your keys contain
-            things like "%^+~{}" then weirdness may happen.
-            Also meta does not work.
-            Also, could maybe use VkKeyScan() along with
-            win32api.SendMessage() instead.
+        Press one single keyboard key
+
+        :keyCode: Supports:
+            A single char text key "s"
+            key names (with/without []) "PAGE_UP"
+            meta keys "CTRL+C"
+        :inBackground: Attempt to send to a background
+            window without making it foreground first. This
+            is unreliable due to windows limitations, but
+            could be nice in some cases.
+
+        NOTE: if you want more complicated sequences, you may
+        want to try pressKeys() instead.
         """
-        import win32com.client
-        shell = win32com.client.Dispatch("WScript.Shell")
-        for c in keys:
-            if c=='\r':
-                continue
-            if c=='\n':
-                c='~'
-            if shift:
-                c='+'+c
-            if ctrl:
-                c='^'+c
-            if alt:
-                c=r'%'+c
-            shell.SendKeys(c,0)
+        sendKeyboardKey(keyCode,self.hWnd,inBackground)
+    sendKeyboard=sendKeyboardKey
+    pressKey=sendKeyboardKey
+    sendKey=sendKeyboardKey
 
     def setMinimized(self,minimize:bool=True)->None:
         """
