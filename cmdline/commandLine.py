@@ -203,7 +203,7 @@ class CommandLineArguments:
     Wrap command line arguments in a more useful way
     """
     def __init__(self,
-        *manyArgs:typing.ParamSpecArgs,
+        *allArgs:typing.Union[CommandLineCompatible,None],
         invalidOsChars:typing.Union[str,typing.Iterable[str],None]=None):
         """ """
         self._argv:typing.List[str]=[]
@@ -216,8 +216,8 @@ class CommandLineArguments:
             else:
                 invalidOsChars=('&','|',';','@')
         self.invalidOsChars:typing.Iterable[str]=invalidOsChars
-        for args in manyArgs: # type: ignore
-            self.append(args) # type: ignore
+        for args in allArgs:
+            self.append(args)
 
     @property
     def args(self)->ArgView:

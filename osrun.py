@@ -328,7 +328,6 @@ def osrun(
     shell:bool=False,
     detach:bool=False,
     debug:bool=False,
-    cmdLineSplit:typing.Optional[bool]=None,
     workingDirectory:typing.Union[None,str,Path]=None,
     env:typing.Optional[typing.Dict[str,typing.Any]]=None,
     runCallbacks:typing.Optional[DataRecievedCallbacks]=None
