@@ -217,7 +217,8 @@ class CommandLineArguments:
                 invalidOsChars=('&','|',';','@')
         self.invalidOsChars:typing.Iterable[str]=invalidOsChars
         for args in allArgs:
-            self.append(args)
+            if args is not None:
+                self.append(args)
 
     @property
     def args(self)->ArgView:
@@ -317,6 +318,8 @@ class CommandLineArguments:
         """
         Add more arguments to the command line
         """
+        if args is None:
+            return
         if hasattr(args,'args') and not isinstance(args,CommandLine):
             args=args.args # type: ignore
         if isinstance(args,Path):
@@ -328,7 +331,8 @@ class CommandLineArguments:
         if not isinstance(args,(list,tuple,CommandLine)):
             raise NotImplementedError(f'WARN: coercing type "{args.__class__.__name__}" to a command line is not yet supported!') # noqa: E501 # pylint: disable=line-too-long
         for arg in args:
-            self._argv.append(arg) # type: ignore
+            if arg is not None:
+                self._argv.append(arg) # type: ignore
     extend=append
 
     def assign(self,args:typing.Union[CommandLineCompatible,None]=None):
