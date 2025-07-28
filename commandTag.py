@@ -8,7 +8,7 @@ import typing
 from collections.abc import Iterable,Mapping
 from lxml import etree # type: ignore
 from paths import URLCompatible,asURL,URL
-from k_runner import osrun
+from k_runner import OsRun,OsRunResult
 
 
 class CommandFailedException(Exception):
@@ -53,7 +53,7 @@ class CommandFailedOnMissingArgumentException(CommandFailedException):
 def commandTag(
     cmdTag:typing.Union[URLCompatible,str,etree.ElementBase],
     **kwargs
-    )->typing.Dict[str,osrun.OsRunResult]:
+    )->typing.Dict[str,OsRunResult]:
     """
     Given an xml tag of the form
         <command id="my_cmd" cmd="something" />
@@ -141,7 +141,7 @@ def commandTag(
             url:URL=typing.cast(URL,asURL(cmdTag))
             cmdTag=url.read()
         cmdTag=etree.fromstring(cmdTag,None)
-    results:typing.Dict[str,osrun.OsRunResult]={}
+    results:typing.Dict[str,OsRunResult]={}
     replacements=dict(**kwargs)
     def getReplacement(s:str)->str:
         """
@@ -204,7 +204,7 @@ def commandTag(
         if el.tag=='command':
             cmd:str=stringReplacement(el.attrib['cmd'])
             id:str=el.attrib.get('id','') # pylint: disable=redefined-builtin
-            result=osrun.run(cmd,shell=True)
+            result=OsRun(cmd,shell=True).run()
             if result.stderr \
                 and el.attrib.get('breakOnStderr','t')[0] in ('t','y','1'):
                 raise CommandFailedOnStderrException(

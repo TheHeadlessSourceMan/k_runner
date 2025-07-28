@@ -89,7 +89,7 @@ class OsRun(DataRecievedCallbacks):
         workingDirectory:typing.Union[None,str,Path]=None,
         environmentVariables:typing.Optional[EnvironmentVariablesCompatible]=None,
         runCallbacks:typing.Optional[DataRecievedCallbacks]=None,
-        priority:int=MEDIUM_PRIORITY,
+        priority:float=MEDIUM_PRIORITY,
         ansiHandling:str="strip",
         showHidden:bool=False,
         showMinimized:bool=False,

@@ -160,11 +160,8 @@ class OsRunJob(RecieveDataManager,Process):
                     newCmd.extend(cmd[1:])
                 cmd=newCmd
                 self.osRun.shell=True
-                self.osRun.debug=True # TODO: temporary
             else:
-                # TODO: not sure how to do this.
-                # Maybe the "nice" command or something??
-                raise NotImplementedError()
+                self.priority=self.osRun.priority
         if os.name=='nt':
             from win32con import SW_MINIMIZE,SW_MAXIMIZE,SW_HIDE
             startupinfo=subprocess.STARTUPINFO()

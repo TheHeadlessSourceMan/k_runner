@@ -2,18 +2,20 @@
 Tools for managing priority
 """
 
-# my priority codes (0-100) low-high
+# my priority codes (in decimal percent)
+# 0.0=lowest, 1.0=highest, >1.0 is realtime (which is usually a bad idea)
 LOWEST_PRIORITY=0
 LOW_PRIORITY=0
-LOWER_PRIORITY=25
-BELOW_NORMAL_PRIORITY=25
-NORMAL_PRIORITY=50
-MEDIUM_PRIORITY=50
-ABOVE_NORMAL_PRIORITY=75
-HIGHER_PRIORITY=75
-HIGH_PRIORITY=100
-HIGHEST_PRIORITY=100
-REALTIME_PRIORITY=101
+LOWER_PRIORITY=0.25
+BELOW_NORMAL_PRIORITY=0.25
+NORMAL_PRIORITY=0.50
+MEDIUM_PRIORITY=0.50
+ABOVE_NORMAL_PRIORITY=0.75
+HIGHER_PRIORITY=0.75
+HIGH_PRIORITY=1.00
+HIGHEST_PRIORITY=1.00
+REALTIME_PRIORITY=1.01
+
 
 def _getWindowsPriorityCode(pri:int)->int:
     """
@@ -49,18 +51,18 @@ def _getWindowsWmicPriority(pri:int)->str:
         return 'High'
     return 'Realtime'
 
-def _getWindowsPriorityName(pri:int)->str:
+def _getWindowsPriorityName(priority:float)->str:
     """
     For the start.exe command
     """
-    if pri<BELOW_NORMAL_PRIORITY:
+    if priority<BELOW_NORMAL_PRIORITY:
         return 'Low'
-    if pri<NORMAL_PRIORITY:
+    if priority<NORMAL_PRIORITY:
         return 'BelowNormal'
-    if pri<ABOVE_NORMAL_PRIORITY:
+    if priority<ABOVE_NORMAL_PRIORITY:
         return 'Normal'
-    if pri<HIGH_PRIORITY:
+    if priority<HIGH_PRIORITY:
         return 'AboveNormal'
-    if pri<REALTIME_PRIORITY:
+    if priority<REALTIME_PRIORITY:
         return 'High'
     return 'Realtime'
