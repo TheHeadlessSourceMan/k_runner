@@ -7,6 +7,7 @@ with a member called pid, that the manipulator will operate on.
 """
 import typing
 import os
+import datetime
 from pathlib import Path
 import psutil
 if os.name=='nt':
@@ -21,33 +22,261 @@ try:
 except ImportError:
     ProgramDebugInfo=typing.Any
     hasDebuggerManager=False
+from k_runner import EnvironmentVariables # pylint: disable=wrong-import-position
 from .asProcess import ProcessCompatible # noqa: E402 # pylint: disable=wrong-import-position
+from .exceptions import ProcessNotSpecifedException # pylint: disable=wrong-import-position
 if typing.TYPE_CHECKING:
     from k_runner.ui.window import Window
     from cmdline.commandLine import CommandLine
 
 
-class Process(psutil.Process):
+class Process:
     """
     Tool for manipulation system processes.
 
-    You can either create a ProcessManipulator and
-    do as you will with it, or derive from ProcessManipulator
-    with a member called pid, that the manipulator will operate on.
+    You can either create a Process and
+    do as you will with it, or derive from Process
+    with a member called pid, that the process will operate on.
 
     TODO: I feel like I want to have the pid be more dynamic
     like it is pulled from the variable every time it is needed.
     Only time and testing will tell whether this is suitable as-is.
+
+    This is compatible with psutil.Process except:
+        * cmdline is a CommandLine object
+        * name is not a function call, but a property
+        * cwd is a Path property
+        * environ is EnvironmentVariables object
+        * children/parent processes are Process properties
+        * numerous aliases to make using this more intuitive
     """
-    def __init__(self,pid:ProcessCompatible):
-        if hasattr(pid,'process'):
-            pid=pid.process # type: ignore
-        if hasattr(pid,'pid'):
-            pid=pid.pid # type: ignore
-        pid=int(pid) # type: ignore
-        psutil.Process.__init__(self,pid)
+    def __init__(self,pid:typing.Optional[ProcessCompatible]):
+        if pid is not None:
+            if hasattr(pid,'process'):
+                pid=pid.process # type: ignore
+            if hasattr(pid,'pid'):
+                pid=pid.pid # type: ignore
+            pid=int(pid) # type: ignore
+        self._pid:typing.Optional[int]=pid
+        self._psutilProcess=psutil.Process(pid)
         self._name:typing.Optional[str]=None
         self._programDebugInfo:typing.Optional[typing.Any]=None
+        self.as_dict=self._psutilProcess.as_dict
+        self.connections=self._psutilProcess.connections
+        self.cpu_affinity=self._psutilProcess.cpu_affinity
+        self.cpuAffinity=self._psutilProcess.cpu_affinity
+        self.cpu_num=self._psutilProcess.cpu_num
+        self.cpuNum=self._psutilProcess.cpu_num
+        self.cpu_percent=self._psutilProcess.cpu_percent
+        self.cpuPercent=self._psutilProcess.cpu_percent
+        self.cpu_times=self._psutilProcess.cpu_times
+        self.cpuTimes=self._psutilProcess.cpu_times
+        self.create_time=self._psutilProcess.create_time
+        self.exe=self._psutilProcess.exe
+        self.gids=self._psutilProcess.gids
+        self.io_counters=self._psutilProcess.io_counters
+        self.ionice=self._psutilProcess.ionice
+        self.is_running=self._psutilProcess.is_running
+        self.memory_full_info=self._psutilProcess.memory_full_info
+        self.memory_info=self._psutilProcess.memory_info
+        self.memory_info_ex=self._psutilProcess.memory_info_ex
+        self.memory_maps=self._psutilProcess.memory_maps
+        self.memory_percent=self._psutilProcess.memory_percent
+        self.num_ctx_switches=self._psutilProcess.num_ctx_switches
+        self.num_fds=self._psutilProcess.num_fds
+        self.num_handles=self._psutilProcess.num_handles
+        self.num_threads=self._psutilProcess.num_threads
+        self.oneshot=self._psutilProcess.oneshot
+        self.open_files=self._psutilProcess.open_files
+        self.resume=self._psutilProcess.resume
+        self.rlimit=self._psutilProcess.rlimit
+        self.resourceLimits=self._psutilProcess.rlimit
+        self.send_signal=self._psutilProcess.send_signal
+        self.signal=self._psutilProcess.send_signal
+        self.status=self._psutilProcess.status
+        self.suspend=self._psutilProcess.suspend
+        self.pause=self._psutilProcess.suspend
+        self.terminal=self._psutilProcess.terminal
+        self.num_fds=self._psutilProcess.num_fds
+        self.terminate=self._psutilProcess.terminate
+        self.threads=self._psutilProcess.threads
+        self.uids=self._psutilProcess.uids
+        self.username=self._psutilProcess.username
+
+    @property
+    def environmentVariables(self)->EnvironmentVariables:
+        """
+        Environment variables of the process
+        """
+        return EnvironmentVariables(self._psutilProcess.environ())
+    @property
+    def environment(self)->EnvironmentVariables:
+        """
+        Environment variables of the process
+        """
+        return self.environmentVariables
+    @property
+    def environ(self)->EnvironmentVariables:
+        """
+        Environment variables of the process
+        """
+        return self.environmentVariables
+    @property
+    def env(self)->EnvironmentVariables:
+        """
+        Environment variables of the process
+        """
+        return self.environmentVariables
+
+    @property
+    def currentWorkingDirectory(self)->Path:
+        """
+        Current Working Directory
+        """
+        cwd=self._psutilProcess.cwd()
+        if cwd is None or not isinstance(cwd,str):
+            raise ValueError(f'Working directory unexpected value {cwd}')
+        return Path(cwd)
+    @property
+    def workingDirectory(self)->Path:
+        """
+        Current Working Directory
+        """
+        return self.currentWorkingDirectory
+    @property
+    def cwd(self)->Path:
+        """
+        Current Working Directory
+        """
+        return self.currentWorkingDirectory
+
+    @property
+    def executableFilename(self)->Path:
+        """
+        Get the filename of this executable
+        """
+        return Path(self._psutilProcess.exe())
+    @property
+    def executableFile(self)->Path:
+        """
+        Get the filename of this executable
+        """
+        return self.executableFilename
+    @property
+    def executable(self)->Path:
+        """
+        Get the filename of this executable
+        """
+        return self.executableFilename
+    @property
+    def filename(self)->Path:
+        """
+        Get the filename of this executable
+        """
+        return self.executableFilename
+
+    def kill(self,signal=-9):
+        """
+        Make kill act a little more like linux kill command
+        """
+        if signal==-9:
+            self._psutilProcess.kill()
+        else:
+            self._psutilProcess.send_signal(signal)
+
+    @property
+    def openFiles(self)->typing.Iterable[Path]:
+        """
+        All of the files it has open
+        """
+        for f,_ in self._psutilProcess.open_files():
+            yield Path(f)
+
+    @property
+    def isRunning(self)->bool:
+        """
+        Is the process running?
+        """
+        return self._psutilProcess.is_running()
+    @property
+    def running(self)->bool:
+        """
+        Is the process running?
+        """
+        return self.isRunning
+    @property
+    def isStopped(self)->bool:
+        """
+        Is the process running?
+        """
+        return not self.isRunning
+    @property
+    def stopped(self)->bool:
+        """
+        Is the process running?
+        """
+        return not self.isRunning
+
+    @property
+    def startTime(self)->datetime.datetime:
+        """
+        When was the process started
+        """
+        return datetime.datetime.fromtimestamp(
+            self._psutilProcess.create_time())
+    @property
+    def started(self)->datetime.datetime:
+        """
+        When was the process started
+        """
+        return self.startTime
+    @property
+    def creationTime(self)->datetime.datetime:
+        """
+        When was the process started
+        """
+        return self.startTime
+
+    @property
+    def children(self)->typing.Iterable["Process"]:
+        """
+        All immediate child processes
+        """
+        for c in self._psutilProcess.children(False):
+            yield Process(c)
+
+    @property
+    def descendents(self)->typing.Iterable["Process"]:
+        """
+        All decended child processes
+        """
+        for c in self._psutilProcess.children(False):
+            yield Process(c)
+
+    @property
+    def parent(self)->typing.Optional["Process"]:
+        """
+        Parent process
+        """
+        ret=self._psutilProcess.parent()
+        if ret is None:
+            return ret
+        return Process(ret)
+
+    @property
+    def parents(self)->typing.Iterable["Process"]:
+        """
+        All parent processes
+        """
+        for p in self._psutilProcess.parents():
+            yield Process(p)
+
+    @property
+    def psutilProcess(self)->psutil.Process:
+        """
+        Get as a psutil.Process object
+        """
+        return self._psutilProcess
 
     @property
     def commandLineString(self)->str:
@@ -91,7 +320,7 @@ class Process(psutil.Process):
         """
         return self.commandLine
     @property
-    def cmdline(self)->"CommandLine": # type: ignore # pylint: disable=invalid-overridden-method,line-too-long # noqa: E501
+    def cmdline(self)->"CommandLine":
         """
         Get the command line.
 
@@ -129,7 +358,7 @@ class Process(psutil.Process):
                 yield m
 
     def __int__(self)->int:
-        return self._pid
+        return self.pid
 
     @property
     def programDebugInfo(self
@@ -178,14 +407,14 @@ class Process(psutil.Process):
                         raise e
                     self._name=onError
             else:
-                self._name=super().name()
+                self._name=self._psutilProcess.name()
                 if not self._name:
                     self._name=''
         if self._name is None:
             return ''
         return self._name
     @property
-    def name(self)->str: # type: ignore # pylint: disable=invalid-overridden-method # noqa: E501
+    def name(self)->str:
         """
         Gets the name of the process by pid
         """
@@ -248,6 +477,12 @@ class Process(psutil.Process):
         """
         self.nice(self.priorityToNice(priority))
 
+    def nice(self,niceness:typing.Optional[int]=None)->int:
+        """
+        Linux nice utility
+        """
+        return self._psutilProcess.nice(niceness) # type: ignore
+
     def getPriority(self)->float:
         """
         Get the process priority as a percent
@@ -306,7 +541,7 @@ class Process(psutil.Process):
             return hwnd
         return None
 
-    def __eq__(self,
+    def __eq__(self, # type: ignore
         other:typing.Union[str,ProcessCompatible]
         )->bool:
         """ """
@@ -326,6 +561,8 @@ class Process(psutil.Process):
         """
         The pid number of the process
         """
+        if self._pid is None:
+            raise ProcessNotSpecifedException()
         return self._pid
 
     def __repr__(self):
@@ -469,3 +706,12 @@ class Process(psutil.Process):
 
     def __hash__(self)->int:
         return self.pid
+
+
+def getCurrentProcess()->Process:
+    """
+    The currently running process
+    """
+    return Process(os.getpid())
+currentProcess=getCurrentProcess
+thisProcess=getCurrentProcess

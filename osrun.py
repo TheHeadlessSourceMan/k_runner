@@ -11,6 +11,7 @@ from k_runner.processes.priority import MEDIUM_PRIORITY
 from k_runner.osRunResult import OsRunResult
 from k_runner.osRunJob import OsRunJob
 from k_runner.cmdline import CommandLineCompatible,CommandLine
+from k_runner.environmentVariables import EnvironmentVariablesCompatible,EnvironmentVariables
 
 
 class OsRun(DataRecievedCallbacks):
@@ -81,12 +82,12 @@ class OsRun(DataRecievedCallbacks):
     """
 
     def __init__(self,
-        cmd:CommandLineCompatible,
+        commandLine:CommandLineCompatible,
         shell:bool=False,
         detach:bool=False,
         debug:bool=False,
         workingDirectory:typing.Union[None,str,Path]=None,
-        env:typing.Optional[typing.Dict[str,typing.Any]]=None,
+        environmentVariables:typing.Optional[EnvironmentVariablesCompatible]=None,
         runCallbacks:typing.Optional[DataRecievedCallbacks]=None,
         priority:int=MEDIUM_PRIORITY,
         ansiHandling:str="strip",
@@ -109,20 +110,78 @@ class OsRun(DataRecievedCallbacks):
         useParams:typing.List[str]=[]
         self.priority=priority
         self.params:typing.List[str]=useParams # params to pass to the command
-        self.cmd:CommandLine=CommandLine(cmd) # command to run
+        self._commandLine:CommandLine=CommandLine(commandLine) # command to run
         self.shell:bool=shell # run in the system shell environment (slower and usually unnecessary) # noqa: E501 # pylint: disable=line-too-long
         self.detach:bool=detach # detach from this process/run in background
         self.debug:bool=debug # print the command input and output for debugging # noqa: E501 # pylint: disable=line-too-long
         self.workingDirectory:typing.Optional[Path]=None
         if workingDirectory is not None:
             self.workingDirectory=Path(workingDirectory).absolute()
-        if env is None:
-            env=dict(os.environ)
-        self.env:typing.Dict[str,typing.Any]=env
+        if environmentVariables is None:
+            environmentVariables=EnvironmentVariables(os.environ)
+        else:
+            environmentVariables=EnvironmentVariables(environmentVariables)
+        self._environmentVariables:EnvironmentVariables=environmentVariables
         self.showHidden=showHidden
         self.showMinimized=showMinimized
         self.showMaximized=showMaximized
         self.chunkyIO=False # read io in chunks instead of single bytes
+
+    @property
+    def environmentVariables(self)->EnvironmentVariables:
+        """
+        Environment variables
+        """
+        return self._environmentVariables
+    @environmentVariables.setter
+    def environmentVariables(self,env:EnvironmentVariablesCompatible):
+        self._environmentVariables=EnvironmentVariables(env)
+    @property
+    def environ(self)->EnvironmentVariables:
+        """
+        Environment variables
+        """
+        return self.environmentVariables
+    @environ.setter
+    def environ(self,env:EnvironmentVariablesCompatible):
+        self.environmentVariables=env
+    @property
+    def env(self)->EnvironmentVariables:
+        """
+        Environment variables
+        """
+        return self.environmentVariables
+    @env.setter
+    def env(self,env:EnvironmentVariablesCompatible):
+        self.environmentVariables=env
+
+    @property
+    def commandLine(self)->CommandLine:
+        """
+        The command line for this program
+        """
+        return self._commandLine
+    @commandLine.setter
+    def commandLine(self,commandLine:CommandLineCompatible):
+        self._commandLine=CommandLine(commandLine)
+    @property
+    def cmd(self)->CommandLine:
+        """
+        The command line for this program
+        """
+        return self.commandLine
+    @cmd.setter
+    def cmd(self,commandLine:CommandLineCompatible):
+        self.commandLine=commandLine
+    @property
+    def cmdline(self)->CommandLine:
+        """
+        The command line for this program
+        """
+        return self.commandLine
+    @cmdline.setter
+    def cmdline(self,commandLine:CommandLineCompatible):
+        self.commandLine=commandLine
 
     @property
     def json(self)->str:
@@ -152,6 +211,8 @@ class OsRun(DataRecievedCallbacks):
             ret['debug']=self.debug
         if self.workingDirectory is not None and self.workingDirectory:
             ret['workingDirectory']=str(self.workingDirectory)
+        if self.environmentVariables:
+            ret['environmentVariables']=self.environmentVariables.jsonObj
         return ret
     @jsonObj.setter
     def jsonObj(self,jsonObj:typing.Dict[str,typing.Any]):
@@ -160,6 +221,9 @@ class OsRun(DataRecievedCallbacks):
         self.shell=jsonObj.get('shell',False)
         self.detach=jsonObj.get('detach',False)
         self.debug=jsonObj.get('debug',False)
+        env=jsonObj.get('environmentVariables')
+        if env is not None:
+            self.environmentVariables=EnvironmentVariables(env)
         wd=jsonObj.get('workingDirectory',None)
         if wd is not None:
             wd=Path(wd)
@@ -201,7 +265,9 @@ class OsRun(DataRecievedCallbacks):
         moreParams:typing.Optional[typing.Iterable[str]]=None,
         workingDirectory:typing.Union[None,str,Path]=None,
         maxWait:typing.Optional[float]=None,
-        runCallbacks:typing.Optional[DataRecievedCallbacks]=None
+        runCallbacks:typing.Optional[DataRecievedCallbacks]=None,
+        moreEnvironmentVariables:typing.Optional[
+            EnvironmentVariablesCompatible]=None
         )->OsRunResult:
         """
         run the command and return the results
@@ -218,7 +284,8 @@ class OsRun(DataRecievedCallbacks):
         job=self.runAsync(
             moreParams,
             workingDirectory,
-            runCallbacks)
+            runCallbacks,
+            moreEnvironmentVariables)
         ret=job.wait(maxWait)
         return ret
 
@@ -247,7 +314,9 @@ class OsRun(DataRecievedCallbacks):
     def runAsync(self,
         moreParams:typing.Optional[typing.Iterable[str]]=None,
         workingDirectory:typing.Union[None,str,Path]=None,
-        runCallbacks:typing.Optional[DataRecievedCallbacks]=None
+        runCallbacks:typing.Optional[DataRecievedCallbacks]=None,
+        moreEnvironmentVariables:typing.Optional[
+            EnvironmentVariablesCompatible]=None
         )->OsRunJob:
         """
         run the command asynchronously
@@ -259,7 +328,7 @@ class OsRun(DataRecievedCallbacks):
         job=OsRunJob(self,runCallbacks=self)
         job.chunkyIO=self.chunkyIO
         job.extendCallbacks(runCallbacks)
-        job.start(moreParams,workingDirectory)
+        job.start(moreParams,workingDirectory,moreEnvironmentVariables)
         return job
 
     def runIterAllOutput(self,

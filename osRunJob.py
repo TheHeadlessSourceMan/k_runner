@@ -10,17 +10,18 @@ import time
 from pathlib import Path
 import subprocess
 from threading import Thread
+from .environmentVariables import EnvironmentVariablesCompatible
 from .exceptions import OsRunException
 from .dataRecievedCallbacks import DataRecievedCallbacks
 from .osRunResult import OsRunResult
 from .dataRecievedCallbacks import RecieveDataManager
-from .processes.priority import MEDIUM_PRIORITY,_getWindowsPriorityName
+from .processes import Process,MEDIUM_PRIORITY,ProcessNotSpecifedException
 from .cmdline import CommandLine
 if typing.TYPE_CHECKING:
     from osrun import OsRun
 
 
-class OsRunJob(RecieveDataManager):
+class OsRunJob(RecieveDataManager,Process):
     """
     Starts a new job running and collects the results.
 
@@ -43,15 +44,16 @@ class OsRunJob(RecieveDataManager):
             self.workingDirectory=Path(osRun.workingDirectory)
         self.osRun=osRun
         self.chunkyIO=False
+        Process.__init__(self,None)
 
     @property
-    def pid(self)->typing.Optional[int]:
+    def pid(self)->int:
         """
         returns the process id
         if not running, returns None
         """
         if self._popen is None:
-            return None
+            raise ProcessNotSpecifedException()
         return self._popen.pid
 
     def debugLog(self,txt:str)->None:
@@ -88,7 +90,9 @@ class OsRunJob(RecieveDataManager):
 
     def start(self,
         moreParams:typing.Optional[typing.Iterable[str]]=None,
-        workingDirectory:typing.Union[None,str,Path]=None)->None:
+        workingDirectory:typing.Union[None,str,Path]=None,
+        moreEnvironmentVariables:typing.Optional[
+            EnvironmentVariablesCompatible]=None)->None:
         """
         start the thing running
 
@@ -121,6 +125,9 @@ class OsRunJob(RecieveDataManager):
         cmd.extend(self.osRun.params)
         if moreParams is not None:
             cmd.extend(moreParams)
+        environmentVariables=self.osRun.environmentVariables
+        if moreEnvironmentVariables is not None:
+            environmentVariables=environmentVariables.union(moreEnvironmentVariables)
         # launch the program
         creationflags=0
         if self.osRun.detach:
@@ -140,6 +147,7 @@ class OsRunJob(RecieveDataManager):
                 #     start "" /AboveNormal "C:\Windows\System32\mspaint.exe"
                 # see also:
                 # https://www.tenforums.com/tutorials/89548-set-cpu-process-priority-applications-windows-10-a.html
+                from processes.priority import _getWindowsPriorityName
                 if workingDirectory is None:
                     cmdPath=Path(cmd[0]).absolute()
                 else:
@@ -188,7 +196,7 @@ class OsRunJob(RecieveDataManager):
                 stdin=subprocess.PIPE,
                 creationflags=creationflags,
                 cwd=str(workingDirectory),
-                env=self.osRun.env,
+                env=environmentVariables.jsonObj,
                 startupinfo=startupinfo
                 )
         except Exception as e:
@@ -280,7 +288,7 @@ class OsRunJob(RecieveDataManager):
                 self._result=result
         return self._result
 
-    def wait(self,maxWait:typing.Optional[float]=None)->OsRunResult:
+    def wait(self,timeout:typing.Optional[float]=None)->OsRunResult:
         """
         wait for the program to complete and return the result
 
@@ -289,7 +297,7 @@ class OsRunJob(RecieveDataManager):
 
         :throws TimeoutError: if maxWait is exceeded
         """
-        remainingTime=maxWait
+        remainingTime=timeout
         timeSleep=0.1
         while self.running:
             time.sleep(timeSleep)

@@ -330,7 +330,7 @@ class CommandLineArguments:
             args.extend(a)
         if not isinstance(args,(list,tuple,CommandLine)):
             raise NotImplementedError(f'WARN: coercing type "{args.__class__.__name__}" to a command line is not yet supported!') # noqa: E501 # pylint: disable=line-too-long
-        for arg in args:
+        for arg in args: # type: ignore
             if arg is not None:
                 self._argv.append(arg) # type: ignore
     extend=append

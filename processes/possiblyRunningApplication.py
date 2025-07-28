@@ -7,9 +7,10 @@ import os
 from pathlib import Path
 import subprocess
 import psutil
+from k_runner import Process,OsRun
 
 
-AppRestartType=typing.List[typing.Tuple[str,typing.List[str]]]
+AppRestartType=typing.List[OsRun]
 
 
 class PossiblyRunningApplication:
@@ -71,31 +72,28 @@ class PossiblyRunningApplication:
         stop all instances of the application, storing info on
         everything stopped to self._stuffThatWeStopped
         """
-        self._stuffThatWeStopped=[]
         filename=str(self.application)
         if os.sep=='\\':
             # windows filenames are not case-sensitive
             filename=filename.lower()
-        for proc in psutil.process_iter(['name', 'exe', 'cmdline']):
-            processFullFilename=proc.info['exe']
+        for p in psutil.process_iter(['name','exe','cmdline']):
+            proc=Process(p)
+            processFullFilename=str(proc.executableFile)
             if processFullFilename is None or not processFullFilename:
                 continue
             if os.sep=='\\':
                 # windows filenames are not case-sensitive
                 processFullFilename=processFullFilename.lower()
             if processFullFilename.endswith(filename):
-                processArgs=proc.info['cmdline']
-                # make the args a proper argv, including full path in filename
-                if processArgs is None or len(processArgs)<1:
-                    processArgs=[processFullFilename]
-                else:
-                    processArgs[0]=processFullFilename
+                processArgs=proc.cmdline
                 pid=proc.pid
                 try:
-                    from k_runner.cmdline import argvToString
-                    print(f'killing ({pid}): {argvToString(processArgs)}')
-                    self._stuffThatWeStopped.append(
-                        (processFullFilename,processArgs))
+                    print(f'killing ({pid}): {processArgs}')
+                    restarter=OsRun(
+                        processArgs,detach=True,
+                        environmentVariables=proc.environmentVariables,
+                        workingDirectory=proc.cwd)
+                    self._stuffThatWeStopped.append(restarter)
                     proc.kill()
                 except (psutil.AccessDenied,psutil.NoSuchProcess):
                     pass
@@ -105,11 +103,9 @@ class PossiblyRunningApplication:
         """
         restart the applications we stop()'ed
         """
-        from k_runner.cmdline import argvToString
-        for _,argv in self._stuffThatWeStopped:
-            print(f'restarting: {argvToString(argv)}')
-            subprocess.Popen(argv,shell=True,stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        for osRun in self._stuffThatWeStopped:
+            print(f'restarting: {osRun.commandLine}')
+            osRun.run()
 
 
 def stopAllProcesses(application:str)->int:
