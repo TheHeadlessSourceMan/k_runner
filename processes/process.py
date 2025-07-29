@@ -65,15 +65,17 @@ class Process:
         self.connections=self._psutilProcess.connections
         self.cpu_affinity=self._psutilProcess.cpu_affinity
         self.cpuAffinity=self._psutilProcess.cpu_affinity
-        self.cpu_num=self._psutilProcess.cpu_num
-        self.cpuNum=self._psutilProcess.cpu_num
+        if hasattr(self._psutilProcess,'cpu_num'):
+            self.cpu_num=self._psutilProcess.cpu_num
+            self.cpuNum=self._psutilProcess.cpu_num
         self.cpu_percent=self._psutilProcess.cpu_percent
         self.cpuPercent=self._psutilProcess.cpu_percent
         self.cpu_times=self._psutilProcess.cpu_times
         self.cpuTimes=self._psutilProcess.cpu_times
         self.create_time=self._psutilProcess.create_time
         self.exe=self._psutilProcess.exe
-        self.gids=self._psutilProcess.gids
+        if hasattr(self._psutilProcess,'gids'):
+            self.gids=self._psutilProcess.gids
         self.io_counters=self._psutilProcess.io_counters
         self.ionice=self._psutilProcess.ionice
         self.is_running=self._psutilProcess.is_running
@@ -83,24 +85,29 @@ class Process:
         self.memory_maps=self._psutilProcess.memory_maps
         self.memory_percent=self._psutilProcess.memory_percent
         self.num_ctx_switches=self._psutilProcess.num_ctx_switches
-        self.num_fds=self._psutilProcess.num_fds
+        if hasattr(self._psutilProcess,'num_fds'):
+            self.num_fds=self._psutilProcess.num_fds
         self.num_handles=self._psutilProcess.num_handles
         self.num_threads=self._psutilProcess.num_threads
         self.oneshot=self._psutilProcess.oneshot
         self.open_files=self._psutilProcess.open_files
         self.resume=self._psutilProcess.resume
-        self.rlimit=self._psutilProcess.rlimit
-        self.resourceLimits=self._psutilProcess.rlimit
+        if hasattr(self._psutilProcess,'rlimit'):
+            self.rlimit=self._psutilProcess.rlimit
+            self.resourceLimits=self._psutilProcess.rlimit
         self.send_signal=self._psutilProcess.send_signal
         self.signal=self._psutilProcess.send_signal
         self.status=self._psutilProcess.status
         self.suspend=self._psutilProcess.suspend
         self.pause=self._psutilProcess.suspend
-        self.terminal=self._psutilProcess.terminal
-        self.num_fds=self._psutilProcess.num_fds
+        if hasattr(self._psutilProcess,'terminal'):
+            self.terminal=self._psutilProcess.terminal
+        if hasattr(self._psutilProcess,'num_fds'):
+            self.num_fds=self._psutilProcess.num_fds
         self.terminate=self._psutilProcess.terminate
         self.threads=self._psutilProcess.threads
-        self.uids=self._psutilProcess.uids
+        if hasattr(self._psutilProcess,'uids'):
+            self.uids=self._psutilProcess.uids
         self.username=self._psutilProcess.username
 
     @property
@@ -518,29 +525,6 @@ class Process:
         """
         self.increasePriority(-byAmount)
 
-    def getHwnds(self,visibleOnly:bool=True)->typing.Iterable[int]:
-        """
-        Get the window handles associated with the process
-        """
-        from .find import getHwndsByPid
-        return getHwndsByPid(self.pid,visibleOnly)
-
-    @property
-    def hwnds(self)->typing.Iterable[int]:
-        """
-        Get the window handles associated with the process
-        """
-        return self.getHwnds()
-
-    @property
-    def hwnd(self)->typing.Optional[int]:
-        """
-        Get the primary window handle associated with the process
-        """
-        for hwnd in self.hwnds:
-            return hwnd
-        return None
-
     def __eq__(self, # type: ignore
         other:typing.Union[str,ProcessCompatible]
         )->bool:
@@ -647,6 +631,7 @@ class Process:
         """
         Get all top level windows for the process
         """
+        from k_runner.ui.window import Window
         return [Window(hWnd) for hWnd in self.hWnds]
     @property
     def windows(self)->typing.Iterable["Window"]:
@@ -662,6 +647,7 @@ class Process:
         hWnd=self.hWnd
         if hWnd is None:
             return None
+        from k_runner.ui.window import Window
         return Window(hWnd)
     @property
     def window(self)->typing.Optional["Window"]:
@@ -669,6 +655,29 @@ class Process:
         Get all top level windows for the process
         """
         return self.getWindow()
+
+    def getHwnds(self,visibleOnly:bool=True)->typing.Iterable[int]:
+        """
+        Get the window handles associated with the process
+        """
+        from .find import getHwndsByPid
+        return getHwndsByPid(self.pid,visibleOnly)
+
+    @property
+    def hwnds(self)->typing.Iterable[int]:
+        """
+        Get the window handles associated with the process
+        """
+        return self.getHwnds()
+
+    @property
+    def hwnd(self)->typing.Optional[int]:
+        """
+        Get the primary window handle associated with the process
+        """
+        for hwnd in self.hwnds:
+            return hwnd
+        return None
 
     def getProcessHwnds(self)->typing.Iterable[int]:
         """
@@ -685,7 +694,7 @@ class Process:
         """
         return self.getProcessHwnds()
 
-    def getProcessHwnd(self)->int:
+    def getProcessHwnd(self)->typing.Optional[int]:
         """
         Get main top-level window associated with
         the process being debugged
@@ -695,7 +704,7 @@ class Process:
         from .find import pidToHwnd
         return pidToHwnd(self.pid)
     @property
-    def hWnd(self)->int:
+    def hWnd(self)->typing.Optional[int]:
         """
         Get the main top-level window associated with
         the process being debugged

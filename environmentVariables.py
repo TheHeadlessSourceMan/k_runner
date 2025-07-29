@@ -176,10 +176,12 @@ class EnvironmentVariables:
                     if len(kv)!=2:
                         continue
                     self._env[kv[0].rstrip()]=kv[1].lstrip()
-        elif isinstance(env,(dict,EnvironmentVariables)):
+        elif hasattr(env,'__getitem__') and hasattr(env,'items'):
+            env=typing.cast(typing.Dict[str,typing.Any],env)
             for k,v in env.items():
                 self._env[str(k)]=str(v)
         else:
+            env=typing.cast(typing.Iterable[EnvironmentVariablesCompatible],env)
             for e in env:
                 self.append(e)
     extend=append

@@ -45,6 +45,7 @@ def findSystemProcesses(
         # Looks good!
         yield proc
 
+
 def getHwndsByPid(pid:int,visibleOnly:bool=True)->typing.Iterable[int]:
     """
     Gets any and all top-level windows of a process by pid
@@ -69,6 +70,18 @@ def getHwndsByPid(pid:int,visibleOnly:bool=True)->typing.Iterable[int]:
 pidToHwnds=getHwndsByPid
 
 
+def getHwndByPid(pid:int,visibleOnly:bool=True)->typing.Optional[int]:
+    """
+    Gets main top-level window of a process by pid
+
+    :visibleOnly: whether to exclude invisible windows (default is True)
+    """
+    for hwnd in getHwndsByPid(pid,visibleOnly):
+        return hwnd
+    return None
+pidToHwnd=getHwndByPid
+
+
 def getPidByHwnd(hwnd:int)->int:
     """
     Gets pid of a window
@@ -77,7 +90,7 @@ def getPidByHwnd(hwnd:int)->int:
     """
     _,foundPid=win32process.GetWindowThreadProcessId(hwnd)
     return foundPid
-pidToHwnd=getPidByHwnd
+hwndToPid=getPidByHwnd
 
 
 def findProcesses(

@@ -398,7 +398,7 @@ def osrun(
     detach:bool=False,
     debug:bool=False,
     workingDirectory:typing.Union[None,str,Path]=None,
-    env:typing.Optional[typing.Dict[str,typing.Any]]=None,
+    env:typing.Optional[EnvironmentVariablesCompatible]=None,
     runCallbacks:typing.Optional[DataRecievedCallbacks]=None
     )->OsRunResult:
     """ shortcut for OsRun().run(...) """

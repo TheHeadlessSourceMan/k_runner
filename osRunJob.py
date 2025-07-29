@@ -33,18 +33,33 @@ class OsRunJob(RecieveDataManager,Process):
         """ """
         RecieveDataManager.__init__(self,runCallbacks)
         self._result:typing.Optional[OsRunResult]=None
-        self.running:bool=False
+        self._running:bool=False
         self._outThread:typing.Optional[Thread]=None
         self._errThread:typing.Optional[Thread]=None
         self._popen:typing.Optional[subprocess.Popen]=None
         self._lastReturncode:int=-9999
-        self.workingDirectory:typing.Optional[Path]=None
         if osRun.workingDirectory is not None:
             # keep a copy in case they change it
-            self.workingDirectory=Path(osRun.workingDirectory)
+            self._workingDirectory=Path(osRun.workingDirectory)
+        else:
+            self._workingDirectory=Path(os.curdir)
         self.osRun=osRun
         self.chunkyIO=False
         Process.__init__(self,None)
+
+    @property
+    def currentWorkingDirectory(self)->Path:
+        """
+        Current Working Directory
+        """
+        return self._workingDirectory
+
+    @property
+    def isRunning(self)->bool:
+        """
+        Is the process running?
+        """
+        return self._running
 
     @property
     def pid(self)->int:
@@ -105,7 +120,7 @@ class OsRunJob(RecieveDataManager,Process):
         if self.running:
             self.stop()
         # clear everything out
-        self.running=True
+        self._running=True
         self._result=None
         RecieveDataManager.start(self)
         # set up debugging
@@ -231,7 +246,7 @@ class OsRunJob(RecieveDataManager,Process):
                 and (self._popen.stdout is None or self._popen.stdout.closed)\
                 and (self._popen.stderr is None or self._popen.stderr.closed):
                 #
-                self.running=False
+                self._running=False
                 self.stop()
         self._outThread=Thread(target=_readerThread,
             args=(self.STDOUT,self._popen.stdout))
