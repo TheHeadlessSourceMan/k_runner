@@ -651,7 +651,7 @@ class Process:
             True if you want to ensure there is a network port open
             False if you want to ensure there is not a network port open
         """
-        for connInfo in self._psutilProcess.net_connections():
+        for connInfo in self._psutilProcess.net_connections(): # type: ignore # pylint: disable=no-member
             if connInfo[2] in ('inet4','tcp4','udp4'):
                 port=int(connInfo[3].rsplit(':',1)[-1]) # type: ignore
             elif connInfo[2] in ('inet6','tcp6','udp6'):

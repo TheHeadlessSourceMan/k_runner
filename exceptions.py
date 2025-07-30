@@ -20,3 +20,8 @@ class OsRunException(Exception):
             aMsg.extend(str(cause).split('\n'))
             msg='\n\t'.join(aMsg)
         Exception.__init__(self,msg)
+
+class ProcessNotSpecifedException(Exception):
+    """
+    Thrown when there is a problem running a given command
+    """

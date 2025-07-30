@@ -11,11 +11,11 @@ from pathlib import Path
 import subprocess
 from threading import Thread
 from .environmentVariables import EnvironmentVariablesCompatible
-from .exceptions import OsRunException
+from .exceptions import OsRunException, ProcessNotSpecifedException
 from .dataRecievedCallbacks import DataRecievedCallbacks
 from .osRunResult import OsRunResult
 from .dataRecievedCallbacks import RecieveDataManager
-from .processes import Process,MEDIUM_PRIORITY,ProcessNotSpecifedException
+from .processes import Process,MEDIUM_PRIORITY
 from .cmdline import CommandLine
 if typing.TYPE_CHECKING:
     from osrun import OsRun

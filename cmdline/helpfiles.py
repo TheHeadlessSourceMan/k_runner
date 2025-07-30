@@ -10,10 +10,9 @@ Supports:
 import typing
 import re
 import subprocess
-
-from osrun import OsRun
-from .commandLine import CommandLine
-from .asCommandLine import CommandLineCompatible,asCommandLine
+if typing.TYPE_CHECKING:
+    from .commandLine import CommandLine
+    from .asCommandLine import CommandLineCompatible
 
 
 class CommandLineOption:
@@ -80,9 +79,10 @@ class HelpSystemEntry:
         non-intuitive and should be changed.
     """
     def __init__(self,
-        app:typing.Optional[CommandLineCompatible]=None):
+        app:typing.Optional["CommandLineCompatible"]=None):
         """ """
         if app is not None:
+            from .asCommandLine import asCommandLine
             app=asCommandLine(app)
         self.app:typing.Optional[CommandLine]=app
         self.name:typing.Optional[str]=app.name if app is not None else None
@@ -337,6 +337,7 @@ class HelpSystemEntry:
         """
         if self.app is None:
             raise IndexError('Cannot lookup command line for unknown program')
+        from osrun import OsRun
         result=OsRun(self.app,shell=True).run(cmdline)
         return self.__getCommandLineOptionsFromText(result.stdout.strip())
 
