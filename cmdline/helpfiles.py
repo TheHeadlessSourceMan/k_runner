@@ -10,8 +10,8 @@ Supports:
 import typing
 import re
 import subprocess
-
-from .asCommandLine import CommandLineCompatible
+from .commandLine import CommandLine
+from .asCommandLine import CommandLineCompatible,asCommandLine
 
 
 class CommandLineOption:
@@ -79,12 +79,15 @@ class HelpSystemEntry:
     """
     def __init__(self,
         app:typing.Optional[CommandLineCompatible]=None):
-        self.app=str(app)
-        self.name=app
-        self.description=''
-        self.commandLineOptions=[]
-        self.helpText=None
-        self.helpHtml=None
+        """ """
+        if app is not None:
+            app=asCommandLine(app)
+        self.app:typing.Optional[CommandLine]=app
+        self.name:typing.Optional[str]=app.name if app is not None else None
+        self.description:str=''
+        self.commandLineOptions:typing.List[str]=[]
+        self.helpText:typing.Optional[str]=None
+        self.helpHtml:typing.Optional[str]=None
 
     def getHelpHtml(self)->str:
         """
@@ -128,10 +131,12 @@ class HelpSystemEntry:
         if self.helpText is None:
             if self.helpHtml is None:
                 self.getCommandLineOptions()
-            if self.helpText is None:
+            elif self.helpText is None:
                 # appears redundant, but is here in case
                 # getCommandLineOptions returned some text
                 self.helpText=self.__unHtml(self.helpHtml,preformatted=True)
+            else:
+                self.helpText=''
         return self.helpText
 
     def __repr__(self):
@@ -151,7 +156,7 @@ class HelpSystemEntry:
         This source can be either html or plaintext and you can pass in
         a filename, url, or string containing the data.
         You can also specify "man" or "[app_name][ help_parameter]" to
-        specifically query the manpage or command itsself.
+        specifically query the manpage or command itself.
 
         Since there are a lot of different ways the source could be formatted,
         this may or may not always work.
@@ -163,21 +168,18 @@ class HelpSystemEntry:
             if urlBufferOrFile[0]=='-':
                 # this looks like a command line parameter, so assume
                 # they meant to run the app with this
-                self.__getCommandLineOptionsFromAppHelp(urlBufferOrFile)
-                return ()
+                return self.__getCommandLineOptionsFromAppHelp(urlBufferOrFile)
             elif urlBufferOrFile=='man':
                 # get from the man page
-                self.__getCommandLineOptionsFromMan()
-                return ()
+                return self.__getCommandLineOptionsFromMan()
             elif urlBufferOrFile.split(' ',1)[0]==self.app:
                 # get from the app itsself
                 urlBufferOrFileSplitted=urlBufferOrFile.split(' ',1)
                 if len(urlBufferOrFileSplitted)>1:
-                    self.__getCommandLineOptionsFromAppHelp(urlBufferOrFileSplitted[1])
+                    return self.__getCommandLineOptionsFromAppHelp(urlBufferOrFileSplitted[1])
                 else:
                     raise Exception(
                         'Nothing to get the command line arguments of')
-                return ()
             elif urlBufferOrFile.find('\n') or urlBufferOrFile.find('<'):
                 # buffer
                 textBuffer=urlBufferOrFile
@@ -195,7 +197,7 @@ class HelpSystemEntry:
         else:
             # Try and find the info automatically
             if len(self.commandLineOptions)<1:
-                self.__getCommandLineOptionsFromMan()
+                self.commandLineOptions=self.__getCommandLineOptionsFromMan()
             if len(self.commandLineOptions)<1:
                 self.__getCommandLineOptionsFromAppHelp('/?') # windows style
             if len(self.commandLineOptions)<1:
@@ -215,13 +217,13 @@ class HelpSystemEntry:
         it could maybe use some cleanup, but works pretty well overall
         """
         self.helpText=text
-        regex=r"""^((?:[,\s]*[-/]{1,2}[^\s]*)+)(\s.*?)[\s\.:=>]{2,}(.*?)(?:(?=^\s*[-/])|\z)""" # noqa: E501 # pylint: disable = line-too-long
+        regex=r"""^((?:[,\s]*[-/]{1,2}[^\s]*)+)(\s.*?)[\s\.:=>]{2,}(.*?)(?:(?=^\s*[-/])|\Z)""" # noqa: E501 # pylint: disable = line-too-long
         regex=re.compile(regex,re.MULTILINE|re.DOTALL)
         for m in regex.finditer(text):
             options=str(m.group(1)).replace(',',' ').strip().split(' ')
             parameters=str(m.group(3)).strip().split(' ')
             # TODO: Do we need a more platform-independent
-            # way of spliting lines?
+            # way of splitting lines?
             description=' '.join([line.strip() for line in str(m.group(3)).split('\n')]) # remove newlines and indents # noqa: E501 # pylint: disable = line-too-long
             self.commandLineOptions.append(CommandLineOption(
                 options,description=description,paramsAfter=parameters))
@@ -235,7 +237,7 @@ class HelpSystemEntry:
             return ''
         if not preformatted:
             html=html.replace('\n',' ')
-        htmlSplitted=html.split('<')
+        htmlList=html.split('<')
         def decodeTag(tag:str,contents:str='')->str:
             """
             Decode a single tag
@@ -246,24 +248,25 @@ class HelpSystemEntry:
             elif tag =='td':
                 return '\t'+contents
             return ' '+contents
-        html=htmlSplitted[0]+(''.join([decodeTag(*h.rsplit('>',1)) for h in htmlSplitted[1:]]))
-        htmlSplitted=html.replace('  ',' ').split('&')
-        ampcodes={
+        html=htmlList[0]+(
+            ''.join([decodeTag(*h.rsplit('>',1)) for h in htmlList[1:]]))
+        htmlList=html.replace('  ',' ').split('&')
+        ampersandCodes={
             'gt':'>',
             'lt':'<',
             'minus':'-',
             'plus':'+',
             'nbsp':' ',
             'amp':'&'}
-        def decodeAmpresand(ampcode:str,remainder:str)->str:
+        def decodeAmpersand(ampersandCode:str,remainder:str)->str:
             """
-            decode a single html apresand code
+            decode a single html ampersandCode code
             """
-            if ampcode in ampcodes:
-                remainder=ampcodes[ampcode]+remainder
+            if ampersandCode in ampersandCodes:
+                remainder=ampersandCodes[ampersandCode]+remainder
             return remainder
-        html=htmlSplitted[0]+''.join([
-            decodeAmpresand(*h.split(';',1)) for h in html[1:]])
+        html=htmlList[0]+''.join([
+            decodeAmpersand(*h.split(';',1)) for h in html[1:]])
         return html.replace(' .','.').replace(' ,',',')
 
     def __toHtml(self,text:typing.Any)->str:
@@ -275,8 +278,8 @@ class HelpSystemEntry:
         if not isinstance(text,str):
             text=str(text)
         text=text.replace('&','&amp;')
-        ampcodes={'gt':'>','lt':'<','minus':'-','plus':'+'}
-        for k,v in list(ampcodes.items()):
+        ampersandCodes={'gt':'>','lt':'<','minus':'-','plus':'+'}
+        for k,v in list(ampersandCodes.items()):
             text=text.replace(v,'&'+k+';')
         text=text.replace('  ',' &nbsp;')
         text=text.replace('\n','<br />\n')
@@ -296,7 +299,7 @@ class HelpSystemEntry:
             #sectionRe=r"""<h2>\s*([^\s<]+).*?<p[^>]*>(.*?)(?=</p>)""" # old one # noqa: E501 # pylint: disable = line-too-long
             sectionRe=r"""<h2>\s*([^\s<]+).*?<p[^>]*>(.*?)(?:(?=</p>\s*?<(?:h2|/body)>))""" # noqa: E501 # pylint: disable = line-too-long
             sectionRe=re.compile(sectionRe,re.MULTILINE|re.DOTALL)
-            sections={}
+            sections:typing.Dict[str,str]={}
             for m in sectionRe.finditer(html):
                 sections[m.group(1)]=m.group(2)
             if 'DESCRIPTION' in sections:
@@ -322,9 +325,9 @@ class HelpSystemEntry:
         )->typing.Iterable[CommandLineOption]:
         """
         Tries to get the command line options for a program from
-        the program itsself.
+        the program itself.
 
-        TODO: If the program accidentilly starts in interactive mode, then
+        TODO: If the program accidentally starts in interactive mode, then
         we need a way to bust out after a period of time!
         """
         if self.app is None:
@@ -333,8 +336,8 @@ class HelpSystemEntry:
         po=subprocess.Popen(cmd,
             stderr=subprocess.PIPE,stdout=subprocess.PIPE,shell=True)
         out,_=po.communicate()
-        text=out.decode('utf-8',errors='ignore')
-        return self.__getCommandLineOptionsFromText(text)
+        outStr=out.decode('utf-8',errors='ignore').strip()
+        return self.__getCommandLineOptionsFromText(outStr)
 
     def __getCommandLineOptionsFromMan(self
         )->typing.Iterable[CommandLineOption]:
@@ -348,8 +351,8 @@ class HelpSystemEntry:
         po=subprocess.Popen(cmd,
             stderr=subprocess.PIPE,stdout=subprocess.PIPE,shell=True)
         out,_=po.communicate()
-        html=out.decode('utf-8',errors='ignore')
-        return self.__getCommandLineOptionsFromHtml(html)
+        outStr=out.decode('utf-8',errors='ignore').strip()
+        return self.__getCommandLineOptionsFromHtml(outStr)
 
     def getDescription(self,
         stripNewlines:bool=False,
@@ -408,7 +411,7 @@ def main(args:typing.Iterable[str])->int:
 
     :args: command line parameters WITOUT sys.argv[0]
     """
-    printhelp=False
+    printHelp=False
     cmd=None
     infoFrom=[]
     out=[]
@@ -421,18 +424,18 @@ def main(args:typing.Iterable[str])->int:
                         out.append(arg[-1])
                     else:
                         print('Unrecognized parameter: '+arg[0])
-                        printhelp=True
+                        printHelp=True
                 else:
                     print('Unrecognized parameter: '+arg)
-                    printhelp=True
+                    printHelp=True
             else:
                 cmd=arg
         else:
             infoFrom.append(arg)
     if cmd is None:
         print('ERR: no cmd specified.')
-        printhelp=True
-    if printhelp:
+        printHelp=True
+    if printHelp:
         print('USAGE:')
         print('\thelpfiles.py --out=filename [--out=filename ...] cmd [get_info_from]') # noqa: E501 # pylint: disable = line-too-long
         print('PARAMS:')

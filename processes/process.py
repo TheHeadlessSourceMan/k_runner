@@ -11,13 +11,13 @@ import datetime
 from pathlib import Path
 import psutil
 if os.name=='nt':
-    import win32api
-    import win32process
-    import win32con
-    import pywintypes
+    import win32api # type: ignore
+    import win32process # type: ignore
+    import win32con # type: ignore
+    import pywintypes # type: ignore
 try:
-    import codeTools.debuggerManager as debuggerManager
-    from codeTools import ProgramDebugInfo
+    import codeTools.debuggerManager as debuggerManager # type: ignore
+    from codeTools import ProgramDebugInfo # type: ignore
     hasDebuggerManager=True
 except ImportError:
     ProgramDebugInfo=typing.Any
@@ -27,6 +27,7 @@ from .asProcess import ProcessCompatible # noqa: E402 # pylint: disable=wrong-im
 from .exceptions import ProcessNotSpecifedException # pylint: disable=wrong-import-position
 if typing.TYPE_CHECKING:
     from k_runner.ui.window import Window
+    from k_runner.ui.windowHandleType import WindowHandleType
     from cmdline.commandLine import CommandLine
 
 
@@ -295,11 +296,11 @@ class Process:
             # Requires the wmi module:
             # http://timgolden.me.uk/python/wmi/index.html
             import wmi # type: ignore # pylint: disable = import-error
-            c=wmi.WMI()
-            print(dir(c))
+            c:typing.Any=wmi.WMI() # type: ignore
+            print(dir(c)) # type: ignore
             #raise Exception()
-            for process in c.Win32_Process():
-                print(process.CommandLine)
+            for process in c.Win32_Process(): # type: ignore
+                print(process.CommandLine) # type: ignore
         else:
             # use powershell
             # see also:
@@ -368,7 +369,7 @@ class Process:
         return self.pid
 
     @property
-    def programDebugInfo(self
+    def programDebugInfo(self # type: ignore
         )->typing.Optional[ProgramDebugInfo]: # type: ignore
         """
         Gets the registered program debug profile (in DebuggerManager)
@@ -386,11 +387,11 @@ class Process:
     def attachDebugger(self)->str:
         """
         Attempt to attach this process to the appropriate debugger
-        according to the configuation in its DebugManager profile
+        according to the configuration in its DebugManager profile
         """
-        pdi=self.programDebugInfo
+        pdi=self.programDebugInfo # type: ignore
         if pdi is not None:
-            return pdi.attachDebugger(self.pid) # noqa: E501 # pylint: disable=too-many-function-args
+            return pdi.attachDebugger(self.pid)  # type: ignore # noqa: E501 # pylint: disable=too-many-function-args
         return 'ERR: no debugger found'
     debug=attachDebugger
 
@@ -412,11 +413,12 @@ class Process:
                 except pywintypes.error as e: # type: ignore # pylint: disable = no-member
                     if isinstance(onError,Exception):
                         raise e
-                    self._name=onError
             else:
                 self._name=self._psutilProcess.name()
                 if not self._name:
                     self._name=''
+        if self._name is None:
+            self._name='[UNKNOWN]'
         if self._name is None:
             return ''
         return self._name
@@ -525,6 +527,29 @@ class Process:
         """
         self.increasePriority(-byAmount)
 
+    def getHwnds(self,visibleOnly:bool=True)->typing.Iterable[int]:
+        """
+        Get the window handles associated with the process
+        """
+        from .find import getHwndsByPid
+        return getHwndsByPid(self.pid,visibleOnly)
+
+    @property
+    def hwnds(self)->typing.Iterable["WindowHandleType"]:
+        """
+        Get the window handles associated with the process
+        """
+        return self.getHwnds()
+
+    @property
+    def hwnd(self)->typing.Optional["WindowHandleType"]:
+        """
+        Get the primary window handle associated with the process
+        """
+        for hwnd in self.hwnds:
+            return hwnd
+        return None
+
     def __eq__(self, # type: ignore
         other:typing.Union[str,ProcessCompatible]
         )->bool:
@@ -552,9 +577,31 @@ class Process:
     def __repr__(self):
         return '[0x%08x] %s'%(self.pid,self.commandline)
 
+    @property
+    def shortName(self)->str:
+        """
+        Name without the filename decoration stuff
+        """
+        return Path(self.name).stem
+
+    def processNameMatches(self,
+        other:typing.Union[
+            str,typing.Pattern[str],"Process"]
+        )->bool:
+        """
+        Test if the process name for this process matches a given
+        executable name, or regex
+        """
+        if isinstance(other,Process):
+            other=other.name
+        if isinstance(other,str):
+            return other.lower()==self.shortName.lower()
+        return other.match(self.name) is not None
+
     def cmdlineMatches(self,
         other:typing.Union[
-            str,Path,typing.Pattern[str],typing.Iterable[str],"Process"]
+            str,Path,typing.Pattern[str],typing.Iterable[str],
+            "Process","CommandLine"]
         )->bool:
         """
         Test if the command line for this process matches a given
@@ -570,7 +617,12 @@ class Process:
         if isinstance(other,(str,Path)):
             if isinstance(other,str):
                 other=Path(os.path.expandvars(other)).absolute()
-            return exe==other
+            try:
+                return Path(self.exe())==other
+            except Exception:
+                return False
+        if hasattr(other,'match'):
+            return other.match(self.exe())
         isSame=True
         other=typing.cast(typing.Iterable[str],other)
         ourCmd=typing.cast(typing.Iterable[str],self.cmdline)
@@ -593,7 +645,7 @@ class Process:
             True if you want to ensure there is a network port open
             False if you want to ensure there is not a network port open
         """
-        for connInfo in self.connections():
+        for connInfo in self.net_connections():
             if connInfo[2] in ('inet4','tcp4','udp4'):
                 port=int(connInfo[3].rsplit(':')[-1])
             elif connInfo[2] in ('inet6','tcp6','udp6'):
@@ -656,30 +708,7 @@ class Process:
         """
         return self.getWindow()
 
-    def getHwnds(self,visibleOnly:bool=True)->typing.Iterable[int]:
-        """
-        Get the window handles associated with the process
-        """
-        from .find import getHwndsByPid
-        return getHwndsByPid(self.pid,visibleOnly)
-
-    @property
-    def hwnds(self)->typing.Iterable[int]:
-        """
-        Get the window handles associated with the process
-        """
-        return self.getHwnds()
-
-    @property
-    def hwnd(self)->typing.Optional[int]:
-        """
-        Get the primary window handle associated with the process
-        """
-        for hwnd in self.hwnds:
-            return hwnd
-        return None
-
-    def getProcessHwnds(self)->typing.Iterable[int]:
+    def getProcessHwnds(self)->typing.Iterable["WindowHandleType"]:
         """
         Get all top-level windows associated with
         the process being debugged
@@ -687,24 +716,26 @@ class Process:
         from .find import pidToHwnds
         return pidToHwnds(self.pid)
     @property
-    def hWnds(self)->typing.Iterable[int]:
+    def hWnds(self)->typing.Iterable["WindowHandleType"]:
         """
         Get all top-level windows associated with
         the process being debugged
         """
         return self.getProcessHwnds()
 
-    def getProcessHwnd(self)->typing.Optional[int]:
+    def getProcessHwnd(self)->typing.Optional["WindowHandleType"]:
         """
         Get main top-level window associated with
         the process being debugged
 
         Can throw IndexError if there is no window.
         """
-        from .find import pidToHwnd
-        return pidToHwnd(self.pid)
+        from .find import getHwndsByPid
+        for hwnd in getHwndsByPid(self.pid):
+            return hwnd
+        return None
     @property
-    def hWnd(self)->typing.Optional[int]:
+    def hWnd(self)->typing.Optional["WindowHandleType"]:
         """
         Get the main top-level window associated with
         the process being debugged

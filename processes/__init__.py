@@ -6,3 +6,4 @@ from .priority import *
 from .asProcess import *
 from .process import *
 from .processGroup import *
+from .find import *

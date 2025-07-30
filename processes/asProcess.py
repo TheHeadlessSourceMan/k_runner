@@ -32,9 +32,9 @@ def asProcess(proc:ProcessCompatible)->"Process":
         if isinstance(proc,int):
             proc=Process(proc)
         elif hasattr(proc,'pid'):
-            proc=asProcess(proc.pid) # type: ignore
+            proc=asProcess(int(proc.pid))
         elif hasattr(proc,'process'):
-            proc=asProcess(proc.process) # type: ignore
+            proc=asProcess(proc.process)
         else:
-            raise TypeError(f'Unable to convert {proc.__class__.__name__} to Process')
+            raise ValueError(f'Unable to convert type "{type(proc)}"')
     return proc

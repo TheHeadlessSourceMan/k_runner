@@ -6,3 +6,4 @@ from .component import *
 from .componentGroup import *
 from .window import *
 from .find import *
+from .windowHandleType import *

@@ -165,7 +165,7 @@ def cmdline(args:typing.Iterable[str])->int:
     Call this with command line parameters
     (WITHOUT the filename as the first argument)
     """
-    printhelp=False
+    printHelp=False
     stop=None
     temporarilyStop=None
     stray=[]
@@ -181,18 +181,18 @@ def cmdline(args:typing.Iterable[str])->int:
             if av[0] in ('-','--'):
                 dashMode=True
             elif av[0] in ('-h','--help','/?'):
-                printhelp=True
+                printHelp=True
             elif av[0] in ('--stop','--stopallprocesses','--kill'):
                 if len(av)<2 or not av[1]:
                     print('ERR: need a program name to stop')
-                    printhelp=True
+                    printHelp=True
                 else:
                     stop=av[0]
             elif av[0] in ('--temporarilystop',
                 '--temporarilystopallprocesses'):
                 if len(av)<2 or not av[1]:
                     print('ERR: need a program name to temporarliy stop')
-                    printhelp=True
+                    printHelp=True
                 else:
                     temporarilyStop=av[1]
             else:
@@ -200,11 +200,11 @@ def cmdline(args:typing.Iterable[str])->int:
         else:
             stray.append(arg)
     # do whatever they asked
-    if not printhelp:
+    if not printHelp:
         if temporarilyStop is not None:
             if not dashMode:
                 print('ERR: expected command to end in "- shellcmd"')
-                printhelp=True
+                printHelp=True
             else:
                 ret=temporarilyStopAllProcesses(temporarilyStop,dashModeArgv)
                 print(ret)
@@ -219,9 +219,9 @@ def cmdline(args:typing.Iterable[str])->int:
                 stopAllProcesses(strayStr)
         else:
             print('ERR: need to specify a command')
-            printhelp=True
+            printHelp=True
     # if it can't be done, print the help table
-    if printhelp:
+    if printHelp:
         print('Useage:')
         print('   possiblyRunningApplication.py [commands] ...')
         print('Commands:')

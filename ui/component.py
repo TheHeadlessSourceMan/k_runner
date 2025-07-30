@@ -8,7 +8,6 @@ import time
 import re
 if os.name=='nt':
     import win32gui
-    import win32ui
     import win32api
     import win32con
     import win32process
@@ -696,6 +695,11 @@ class UiComponent(UiComponentGroup):
         """
         import PIL.Image
         if os.name=='nt':
+            # Import for win32ui is in here because it has been known
+            # to get broken from time to time and cause an import error.
+            # This way it will only take down one method,
+            # not the whole file.
+            import win32ui
             rect=win32gui.GetWindowRect(hWnd)
             w=rect[2]-rect[0]
             h=rect[3]-rect[1]

@@ -6,8 +6,9 @@ import os
 from pathlib import Path
 import psutil
 if os.name=='nt':
-    import win32process
-    import win32gui
+    import win32process # type: ignore
+    import win32gui # type: ignore
+from k_runner.ui.windowHandleType import WindowHandleType # pylint: disable = wrong-import-position # noqa:E501
 from .process import Process # pylint: disable = wrong-import-position
 
 
@@ -20,16 +21,22 @@ def allSystemProcesses()->typing.Generator[Process,None,None]:
 
 
 def findSystemProcesses(
+    processName:typing.Union[None,str,typing.Pattern[str],Process]=None,
     cmdline:typing.Union[None,
-        str,Path,typing.Pattern,typing.Iterable[str],Process],
+        str,Path,typing.Pattern[str],typing.Iterable[str],Process]=None,
     hasNetworkPortOpen:typing.Union[None,int,typing.Iterable[int],bool]=None,
     hasFileOpen:typing.Union[
         None,str,Path,typing.Iterable[typing.Union[str,Path]]]=None
-    )->typing.Iterable[Process]:
+    )->typing.List[Process]:
     """
     Find all system processes that match
     """
+    ret:typing.List[Process]=[]
     for proc in allSystemProcesses():
+        # match the process name
+        if processName is not None:
+            if not proc.processNameMatches(processName):
+                continue
         # match the command line
         if cmdline is not None:
             if not proc.cmdlineMatches(cmdline):
@@ -46,7 +53,10 @@ def findSystemProcesses(
         yield proc
 
 
-def getHwndsByPid(pid:int,visibleOnly:bool=True)->typing.Iterable[int]:
+def getHwndsByPid(
+    pid:int,
+    visibleOnly:bool=True
+    )->typing.Iterable["WindowHandleType"]:
     """
     Gets any and all top-level windows of a process by pid
 
@@ -54,9 +64,9 @@ def getHwndsByPid(pid:int,visibleOnly:bool=True)->typing.Iterable[int]:
 
     TODO: currently works on windows only
     """
-    found:typing.List[int]=[]
+    found:typing.List[WindowHandleType]=[]
     if os.name=='nt':
-        def enumWindowsCB(hwnd,pid):
+        def enumWindowsCB(hwnd:WindowHandleType,pid:int):
             _,foundPid=win32process.GetWindowThreadProcessId(hwnd)
             if pid==foundPid \
                 and (win32gui.IsWindowVisible(hwnd) \
@@ -82,7 +92,19 @@ def getHwndByPid(pid:int,visibleOnly:bool=True)->typing.Optional[int]:
 pidToHwnd=getHwndByPid
 
 
-def getPidByHwnd(hwnd:int)->int:
+def getHwndByPid(pid:int,visibleOnly:bool=True)->typing.Optional[int]:
+    """
+    Gets main top-level window of a process by pid
+
+    :visibleOnly: whether to exclude invisible windows (default is True)
+    """
+    for hwnd in getHwndsByPid(pid,visibleOnly):
+        return hwnd
+    return None
+pidToHwnd=getHwndByPid
+
+
+def getPidByHwnd(hwnd:WindowHandleType)->int:
     """
     Gets pid of a window
 
@@ -94,7 +116,7 @@ hwndToPid=getPidByHwnd
 
 
 def findProcesses(
-    programName:typing.Union[None,str,typing.Pattern]=None
+    programName:typing.Union[None,str,typing.Pattern[str]]=None
     )->typing.Generator[Process,None,None]:
     """
     search for running processes that match the given parameters
@@ -119,7 +141,7 @@ def findProcesses(
 
 
 def findProcess(
-    programName:typing.Union[None,str,typing.Pattern]=None
+    programName:typing.Union[None,str,typing.Pattern[str]]=None
     )->typing.Optional[Process]:
     """
     Exactly like findProcesses(), but returns only one (or none)
@@ -136,14 +158,14 @@ def cmdline(args:typing.Iterable[str])->int:
     :param args: command line arguments (WITHOUT the filename)
     """
     didSomething=False
-    printhelp=False
+    printHelp=False
     currentProcesses:typing.List[Process]=[]
     for arg in args:
         if arg.startswith('-'):
             av=arg.split('=',1)
             av[0]=av[0].lower()
             if av[0] in ('-h','--help'):
-                printhelp=True
+                printHelp=True
             elif av[0]=='--findprocess':
                 if len(av)>1:
                     p=findProcess(av[1])
@@ -166,10 +188,10 @@ def cmdline(args:typing.Iterable[str])->int:
                     print(p)
                 didSomething=True
             else:
-                printhelp=True
+                printHelp=True
         else:
-            printhelp=True
-    if printhelp or not didSomething:
+            printHelp=True
+    if printHelp or not didSomething:
         print('USEAGE:')
         print('  processPlayset [commands]')
         print('NOTE:')

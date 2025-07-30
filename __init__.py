@@ -16,11 +16,11 @@ from .cmdline import *
 
 from .ui import *
 import k_runner.ui # pylint: disable=wrong-import-order
-uifiddle=k_runner.ui # legacy support
-windowManipulator=k_runner.ui # legacy support
+import k_runner.ui as uifiddle # legacy support
+import k_runner.ui as windowManipulator # legacy support
 
 from .processes import * # noqa: E402 # pylint: disable=wrong-import-position
 import k_runner.processes # noqa: E402,E501 # pylint: disable=wrong-import-order,wrong-import-position
-processPlayset=k_runner.processes # legacy support
-processManipulator=k_runner.processes # legacy support
-possiblyRunningApplication=k_runner.processes # legacy support
+import k_runner.processes as processPlayset # legacy support
+import k_runner.processes as processManipulator # legacy support
+import k_runner.processes as possiblyRunningApplication # legacy support

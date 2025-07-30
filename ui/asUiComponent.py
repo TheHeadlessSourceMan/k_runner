@@ -5,13 +5,14 @@ import typing
 if typing.TYPE_CHECKING:
     from k_runner.processes import ProcessCompatible
     from .component import UiComponent
+    from .windowHandleType import WindowHandleType
 
 
 class ClassWithhwnd(typing.Protocol):
     """
     Any class that contains a compatible hWnd member
     """
-    hwnd:int
+    hwnd:"WindowHandleType"
 class ClassWithhWnd(typing.Protocol):
     """
     Any class that contains a compatible hWnd member
@@ -19,7 +20,7 @@ class ClassWithhWnd(typing.Protocol):
     hWnd:int
 
 
-UiComponentCompatible=typing.Union[int,
+UiComponentCompatible=typing.Union["WindowHandleType",
     "UiComponent",ClassWithhwnd,ClassWithhWnd,"ProcessCompatible"]
 UIComponentCompatible=UiComponentCompatible
 
