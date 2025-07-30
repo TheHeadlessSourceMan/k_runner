@@ -150,8 +150,8 @@ class CommandLineWrapper(HelpSystemEntry):
             return True
         print('ERR: No data found.  File not saved.')
         return False
+CommandLineParameterInfo=CommandLineWrapper
 CmdLineParameterInfo=CommandLineParameterInfo
-
 
 
 class ArgView:
@@ -236,7 +236,7 @@ class CommandLineArguments:
         """
         Just the args
         (that is, without the program name)
-        
+
         You can still modify them and the
         results will be reflected in the output
         """
@@ -245,7 +245,7 @@ class CommandLineArguments:
     @property
     def parameterInfo(self)->CommandLineParameterInfo:
         """
-        Try and find informa
+        Try and find information
         """
         return CommandLineParameterInfo(self)
 
@@ -332,7 +332,7 @@ class CommandLineArguments:
         if args is None:
             return
         if hasattr(args,'args') and not isinstance(args,CommandLine):
-            args=args.args # type: ignore
+            args=typing.cast(CommandLineCompatible,args.args) # type: ignore
         if isinstance(args,Path):
             args=str(args)
         elif isinstance(args,str):
@@ -340,7 +340,7 @@ class CommandLineArguments:
             args=[p]
             args.extend(a)
         if not isinstance(args,(list,tuple,CommandLine)):
-            raise NotImplementedError(f'WARN: coercing type "{args.__class__.__name__}" to a command line is not yet supported!') # noqa: E501 # pylint: disable=line-too-long
+            raise NotImplementedError(f'WARN: coercing type "{type(args)}" to a command line is not yet supported!') # noqa: E501 # pylint: disable=line-too-long
         for arg in args: # type: ignore
             if arg is not None:
                 self._argv.append(arg) # type: ignore
@@ -454,9 +454,9 @@ def main(args:typing.Iterable[str])->int:
     wrapper=CmdLineParameterInfo(cmd)
     wrapper.getCommandLineOptions(' '.join(infoFrom))
     for o in out:
-        extn=o.rsplit('.',1)
-        if extn[-1]=='py':
-            if len(extn)<2 or extn[0]=='' or extn[0]=='-':
+        extension=o.rsplit('.',1)
+        if extension[-1]=='py':
+            if len(extension)<2 or extension[0]=='' or extension[0]=='-':
                 print(wrapper.createPythonWrapper(createMainFunction=True))
             else:
                 wrapper.savePythonWrapper(o,createMainFunction=True)

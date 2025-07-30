@@ -27,11 +27,10 @@ def findSystemProcesses(
     hasNetworkPortOpen:typing.Union[None,int,typing.Iterable[int],bool]=None,
     hasFileOpen:typing.Union[
         None,str,Path,typing.Iterable[typing.Union[str,Path]]]=None
-    )->typing.List[Process]:
+    )->typing.Iterable[Process]:
     """
     Find all system processes that match
     """
-    ret:typing.List[Process]=[]
     for proc in allSystemProcesses():
         # match the process name
         if processName is not None:
@@ -80,19 +79,10 @@ def getHwndsByPid(
 pidToHwnds=getHwndsByPid
 
 
-def getHwndByPid(pid:int,visibleOnly:bool=True)->typing.Optional[int]:
-    """
-    Gets main top-level window of a process by pid
-
-    :visibleOnly: whether to exclude invisible windows (default is True)
-    """
-    for hwnd in getHwndsByPid(pid,visibleOnly):
-        return hwnd
-    return None
-pidToHwnd=getHwndByPid
-
-
-def getHwndByPid(pid:int,visibleOnly:bool=True)->typing.Optional[int]:
+def getHwndByPid(
+    pid:int,
+    visibleOnly:bool=True
+    )->typing.Optional[WindowHandleType]:
     """
     Gets main top-level window of a process by pid
 
@@ -192,7 +182,7 @@ def cmdline(args:typing.Iterable[str])->int:
         else:
             printHelp=True
     if printHelp or not didSomething:
-        print('USEAGE:')
+        print('USAGE:')
         print('  processPlayset [commands]')
         print('NOTE:')
         print('  commands are evaluated in order')

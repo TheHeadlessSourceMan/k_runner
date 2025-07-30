@@ -10,6 +10,8 @@ Supports:
 import typing
 import re
 import subprocess
+
+from osrun import OsRun
 from .commandLine import CommandLine
 from .asCommandLine import CommandLineCompatible,asCommandLine
 
@@ -35,8 +37,8 @@ class CommandLineOption:
         else:
             paramsAfter=tuple(paramsAfter)
         if len(paramsAfter)>1 and paramsAfter[0]=='=':
-            tagon='='+(' '.join(paramsAfter[1:]))
-            self.options=[o+tagon for o in self.options]
+            tagOn='='+(' '.join(paramsAfter[1:]))
+            self.options=[o+tagOn for o in self.options]
         if name is None:
             name=''
             for o in options:
@@ -85,7 +87,7 @@ class HelpSystemEntry:
         self.app:typing.Optional[CommandLine]=app
         self.name:typing.Optional[str]=app.name if app is not None else None
         self.description:str=''
-        self.commandLineOptions:typing.List[str]=[]
+        self.commandLineOptions:typing.List[CommandLineOption]=[]
         self.helpText:typing.Optional[str]=None
         self.helpHtml:typing.Optional[str]=None
 
@@ -100,11 +102,12 @@ class HelpSystemEntry:
                 # appears redundant, but is here in case
                 # getCommandLineOptions returned some html
                 title='Help: '+self.__toHtml(str(self.name))
+                style='margin-left:2cm;font-family:\'Courier New\',monospace;'
                 self.helpHtml='<html><head><title>'\
                     +title\
                     +'</title></head><body><h1>'\
                     +title\
-                    +'</h1><div style="margin-left:2cm;font-family:\'Courier New\',monospace;">'\
+                    +f'</h1><div style="{style}">'\
                     +self.__toHtml(self.helpText)\
                     +'</div></body></html>'
         return self.helpHtml
@@ -137,7 +140,7 @@ class HelpSystemEntry:
                 self.helpText=self.__unHtml(self.helpHtml,preformatted=True)
             else:
                 self.helpText=''
-        return self.helpText
+        return self.helpText # type: ignore
 
     def __repr__(self):
         return self.getHelpText()
@@ -173,10 +176,11 @@ class HelpSystemEntry:
                 # get from the man page
                 return self.__getCommandLineOptionsFromMan()
             elif urlBufferOrFile.split(' ',1)[0]==self.app:
-                # get from the app itsself
+                # get from the app its self
                 urlBufferOrFileSplitted=urlBufferOrFile.split(' ',1)
                 if len(urlBufferOrFileSplitted)>1:
-                    return self.__getCommandLineOptionsFromAppHelp(urlBufferOrFileSplitted[1])
+                    return self.__getCommandLineOptionsFromAppHelp(
+                        urlBufferOrFileSplitted[1])
                 else:
                     raise Exception(
                         'Nothing to get the command line arguments of')
@@ -197,7 +201,8 @@ class HelpSystemEntry:
         else:
             # Try and find the info automatically
             if len(self.commandLineOptions)<1:
-                self.commandLineOptions=self.__getCommandLineOptionsFromMan()
+                self.commandLineOptions=list(
+                    self.__getCommandLineOptionsFromMan())
             if len(self.commandLineOptions)<1:
                 self.__getCommandLineOptionsFromAppHelp('/?') # windows style
             if len(self.commandLineOptions)<1:
@@ -332,12 +337,8 @@ class HelpSystemEntry:
         """
         if self.app is None:
             raise IndexError('Cannot lookup command line for unknown program')
-        cmd=[self.app,cmdline]
-        po=subprocess.Popen(cmd,
-            stderr=subprocess.PIPE,stdout=subprocess.PIPE,shell=True)
-        out,_=po.communicate()
-        outStr=out.decode('utf-8',errors='ignore').strip()
-        return self.__getCommandLineOptionsFromText(outStr)
+        result=OsRun(self.app,shell=True).run(cmdline)
+        return self.__getCommandLineOptionsFromText(result.stdout.strip())
 
     def __getCommandLineOptionsFromMan(self
         )->typing.Iterable[CommandLineOption]:
@@ -347,7 +348,7 @@ class HelpSystemEntry:
         """
         if self.app is None:
             raise IndexError('Cannot lookup manpage for unknown program')
-        cmd=['man','--html=cat',self.app]
+        cmd:typing.List[str]=['man','--html=cat',str(self.app)]
         po=subprocess.Popen(cmd,
             stderr=subprocess.PIPE,stdout=subprocess.PIPE,shell=True)
         out,_=po.communicate()
@@ -387,19 +388,19 @@ class HelpSystemEntry:
                         cols=80
                     else:
                         return text
-                a=[]
+                a:typing.List[str]=[]
                 for line in text.split('\n'):
-                    newLine=[]
+                    newLine:typing.List[str]=[]
                     count=0
                     words=line.split(' ')
                     for w in words:
-                        nextcount=len(w)
-                        if count+nextcount>cols:
+                        nextCount=len(w)
+                        if count+nextCount>cols:
                             a.append(' '.join(newLine))
                             newLine=[]
                             count=0
                         newLine.append(w)
-                        count=count+nextcount+1
+                        count=count+nextCount+1
                     a.append(' '.join(newLine))
                 text='\n'.join(a)
         return text
@@ -409,12 +410,12 @@ def main(args:typing.Iterable[str])->int:
     """
     This generates help for a command line app from the command line.
 
-    :args: command line parameters WITOUT sys.argv[0]
+    :args: command line parameters WITHOUT sys.argv[0]
     """
     printHelp=False
     cmd=None
-    infoFrom=[]
-    out=[]
+    infoFrom:typing.List[str]=[]
+    out:typing.List[str]=[]
     for arg in args:
         if cmd is None:
             if arg[0]=='-':

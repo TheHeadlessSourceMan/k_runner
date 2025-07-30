@@ -22,9 +22,9 @@ try:
 except ImportError:
     ProgramDebugInfo=typing.Any
     hasDebuggerManager=False
-from k_runner import EnvironmentVariables # pylint: disable=wrong-import-position
-from .asProcess import ProcessCompatible # noqa: E402 # pylint: disable=wrong-import-position
-from .exceptions import ProcessNotSpecifedException # pylint: disable=wrong-import-position
+from k_runner import EnvironmentVariables # pylint: disable=wrong-import-position # noqa: E501
+from .asProcess import ProcessCompatible # noqa: E402,E501 # pylint: disable=wrong-import-position,line-too-long
+from .exceptions import ProcessNotSpecifiedException # pylint: disable=wrong-import-position # noqa: E501
 if typing.TYPE_CHECKING:
     from k_runner.ui.window import Window
     from k_runner.ui.windowHandleType import WindowHandleType
@@ -53,22 +53,23 @@ class Process:
     """
     def __init__(self,pid:typing.Optional[ProcessCompatible]):
         if pid is not None:
-            if hasattr(pid,'process'):
-                pid=pid.process # type: ignore
-            if hasattr(pid,'pid'):
-                pid=pid.pid # type: ignore
-            pid=int(pid) # type: ignore
+            while not isinstance(pid,int):
+                if hasattr(pid,'process'):
+                    pid=typing.cast(
+                        ProcessCompatible,pid.process) # type: ignore
+                if hasattr(pid,'pid'):
+                    pid=typing.cast(ProcessCompatible,pid.pid) # type: ignore
         self._pid:typing.Optional[int]=pid
         self._psutilProcess=psutil.Process(pid)
         self._name:typing.Optional[str]=None
         self._programDebugInfo:typing.Optional[typing.Any]=None
-        self.as_dict=self._psutilProcess.as_dict
-        self.connections=self._psutilProcess.connections
+        self.as_dict=self._psutilProcess.as_dict # type: ignore
+        self.connections=self._psutilProcess.connections # type: ignore
         self.cpu_affinity=self._psutilProcess.cpu_affinity
         self.cpuAffinity=self._psutilProcess.cpu_affinity
         if hasattr(self._psutilProcess,'cpu_num'):
-            self.cpu_num=self._psutilProcess.cpu_num
-            self.cpuNum=self._psutilProcess.cpu_num
+            self.cpu_num=self._psutilProcess.cpu_num # type: ignore
+            self.cpuNum=self._psutilProcess.cpu_num # type: ignore
         self.cpu_percent=self._psutilProcess.cpu_percent
         self.cpuPercent=self._psutilProcess.cpu_percent
         self.cpu_times=self._psutilProcess.cpu_times
@@ -76,39 +77,40 @@ class Process:
         self.create_time=self._psutilProcess.create_time
         self.exe=self._psutilProcess.exe
         if hasattr(self._psutilProcess,'gids'):
-            self.gids=self._psutilProcess.gids
+            self.gids=self._psutilProcess.gids # type: ignore
         self.io_counters=self._psutilProcess.io_counters
         self.ionice=self._psutilProcess.ionice
         self.is_running=self._psutilProcess.is_running
         self.memory_full_info=self._psutilProcess.memory_full_info
         self.memory_info=self._psutilProcess.memory_info
-        self.memory_info_ex=self._psutilProcess.memory_info_ex
-        self.memory_maps=self._psutilProcess.memory_maps
+        if hasattr(self._psutilProcess,'memory_info_ex'):
+            self.memory_info_ex=self._psutilProcess.memory_info_ex # type: ignore # noqa: E501
+        self.memory_maps=self._psutilProcess.memory_maps # type: ignore
         self.memory_percent=self._psutilProcess.memory_percent
         self.num_ctx_switches=self._psutilProcess.num_ctx_switches
         if hasattr(self._psutilProcess,'num_fds'):
-            self.num_fds=self._psutilProcess.num_fds
+            self.num_fds=self._psutilProcess.num_fds # type: ignore
         self.num_handles=self._psutilProcess.num_handles
         self.num_threads=self._psutilProcess.num_threads
         self.oneshot=self._psutilProcess.oneshot
         self.open_files=self._psutilProcess.open_files
         self.resume=self._psutilProcess.resume
         if hasattr(self._psutilProcess,'rlimit'):
-            self.rlimit=self._psutilProcess.rlimit
-            self.resourceLimits=self._psutilProcess.rlimit
+            self.rlimit=self._psutilProcess.rlimit # type: ignore
+            self.resourceLimits=self._psutilProcess.rlimit # type: ignore
         self.send_signal=self._psutilProcess.send_signal
         self.signal=self._psutilProcess.send_signal
         self.status=self._psutilProcess.status
         self.suspend=self._psutilProcess.suspend
         self.pause=self._psutilProcess.suspend
         if hasattr(self._psutilProcess,'terminal'):
-            self.terminal=self._psutilProcess.terminal
+            self.terminal=self._psutilProcess.terminal # type: ignore
         if hasattr(self._psutilProcess,'num_fds'):
-            self.num_fds=self._psutilProcess.num_fds
+            self.num_fds=self._psutilProcess.num_fds # type: ignore
         self.terminate=self._psutilProcess.terminate
         self.threads=self._psutilProcess.threads
         if hasattr(self._psutilProcess,'uids'):
-            self.uids=self._psutilProcess.uids
+            self.uids=self._psutilProcess.uids # type: ignore
         self.username=self._psutilProcess.username
 
     @property
@@ -142,7 +144,7 @@ class Process:
         Current Working Directory
         """
         cwd=self._psutilProcess.cwd()
-        if cwd is None or not isinstance(cwd,str):
+        if cwd is None or not isinstance(cwd,str): # type: ignore
             raise ValueError(f'Working directory unexpected value {cwd}')
         return Path(cwd)
     @property
@@ -183,7 +185,7 @@ class Process:
         """
         return self.executableFilename
 
-    def kill(self,signal=-9):
+    def kill(self,signal:int=-9):
         """
         Make kill act a little more like linux kill command
         """
@@ -254,9 +256,9 @@ class Process:
             yield Process(c)
 
     @property
-    def descendents(self)->typing.Iterable["Process"]:
+    def descendants(self)->typing.Iterable["Process"]:
         """
-        All decended child processes
+        All descended child processes
         """
         for c in self._psutilProcess.children(False):
             yield Process(c)
@@ -377,8 +379,9 @@ class Process:
         """
         if hasDebuggerManager and self._programDebugInfo is None:
             dm=debuggerManager.DebuggerManager # type: ignore
-            self._programDebugInfo=dm.getProgramDebugInfo(self.name)
-        return self._programDebugInfo
+            self._programDebugInfo=\
+                dm.getProgramDebugInfo(self.name) # type: ignore
+        return self._programDebugInfo # type: ignore
     @programDebugInfo.setter
     def programDebugInfo(self,
         programDebugInfo:ProgramDebugInfo): # type: ignore
@@ -409,8 +412,10 @@ class Process:
                     handle=win32api.OpenProcess(
                         win32con.PROCESS_QUERY_INFORMATION|win32con.PROCESS_VM_READ, # noqa: E501
                         False,self.pid)
-                    self._name=win32process.GetModuleFileNameEx(handle,0)
-                except pywintypes.error as e: # type: ignore # pylint: disable = no-member
+                    self._name=str(
+                        win32process.GetModuleFileNameEx( # type: ignore
+                            handle,0))
+                except pywintypes.error as e: # type: ignore # pylint: disable=no-member # noqa: E501
                     if isinstance(onError,Exception):
                         raise e
             else:
@@ -419,7 +424,7 @@ class Process:
                     self._name=''
         if self._name is None:
             self._name='[UNKNOWN]'
-        if self._name is None:
+        if self._name is None: # type: ignore
             return ''
         return self._name
     @property
@@ -571,7 +576,7 @@ class Process:
         The pid number of the process
         """
         if self._pid is None:
-            raise ProcessNotSpecifedException()
+            raise ProcessNotSpecifiedException()
         return self._pid
 
     def __repr__(self):
@@ -618,11 +623,12 @@ class Process:
             if isinstance(other,str):
                 other=Path(os.path.expandvars(other)).absolute()
             try:
-                return Path(self.exe())==other
+                return self.executableFilename==other
             except Exception:
                 return False
         if hasattr(other,'match'):
-            return other.match(self.exe())
+            other=typing.cast(typing.Pattern[str],other)
+            return other.match(str(self.executableFilename)) is not None
         isSame=True
         other=typing.cast(typing.Iterable[str],other)
         ourCmd=typing.cast(typing.Iterable[str],self.cmdline)
@@ -645,9 +651,9 @@ class Process:
             True if you want to ensure there is a network port open
             False if you want to ensure there is not a network port open
         """
-        for connInfo in self.net_connections():
+        for connInfo in self._psutilProcess.net_connections():
             if connInfo[2] in ('inet4','tcp4','udp4'):
-                port=int(connInfo[3].rsplit(':')[-1])
+                port=int(connInfo[3].rsplit(':',1)[-1]) # type: ignore
             elif connInfo[2] in ('inet6','tcp6','udp6'):
                 raise NotImplementedError(connInfo[3])
             else:

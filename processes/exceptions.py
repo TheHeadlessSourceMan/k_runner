@@ -7,7 +7,7 @@ class ProcessException(Exception):
     Something bad happened with a process
     """
 
-class ProcessNotSpecifedException(ProcessException):
+class ProcessNotSpecifiedException(ProcessException):
     """
     You are attempting something that requires a process
     but you have not specified one.
