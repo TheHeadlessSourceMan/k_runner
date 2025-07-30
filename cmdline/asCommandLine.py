@@ -6,30 +6,51 @@ from pathlib import Path
 if typing.TYPE_CHECKING:
     from k_runner.processes import ProcessCompatible
     from k_runner.ui import UiComponentCompatible
-    from .commandLine import CommandLine
+    from .commandLine import CommandLineArguments
 
 
 class ClassWithCmdline(typing.Protocol):
     """
     Any class that contains a compatible cmdline member
     """
-    cmdline:"CommandLineCompatible"
+    cmdline:"CommandLineArgumentsCompatible"
+class ClassWithCommandLine(typing.Protocol):
+    """
+    Any class that contains a compatible commandLine member
+    """
+    commandLine:"CommandLineArgumentsCompatible"
+class ClassWithCmdLine(typing.Protocol):
+    """
+    Any class that contains a compatible cmdLine member
+    """
+    cmdLine:"CommandLineArgumentsCompatible"
 
 
-CommandLineCompatible=typing.Union[
+CommandLineArgumentsCompatible=typing.Union[
     str,Path,typing.Iterable[typing.Union[str,Path]],
-    "CommandLine","ProcessCompatible","UiComponentCompatible"]
+    "CommandLineArguments","ProcessCompatible","UiComponentCompatible",
+    ClassWithCommandLine,ClassWithCommandLine,ClassWithCmdLine]
+CommandLineCompatible=CommandLineArgumentsCompatible
+CmdLineArgumentsCompatible=CommandLineArgumentsCompatible
+CmdlineArgumentsCompatible=CommandLineArgumentsCompatible
 
 
-def asCommandLine(
+def asCommandLineArguments(
     cmdline:CommandLineCompatible
-    )->"CommandLine":
+    )->"CommandLineArguments":
     """
     Always return a CommandLine
     """
-    from .commandLine import CommandLine
-    if not isinstance(cmdline,CommandLine):
+    from .commandLine import CommandLineArguments
+    if not isinstance(cmdline,CommandLineArguments):
         if hasattr(cmdline,'cmdline'):
-            return asCommandLine(cmdline)
-        cmdline=CommandLine(cmdline)
+            return asCommandLine(cmdline.cmdline) # type: ignore
+        if hasattr(cmdline,'cmdLine'):
+            return asCommandLine(cmdline.cmdLine) # type: ignore
+        if hasattr(cmdline,'commandLine'):
+            return asCommandLine(cmdline.commandLine) # type: ignore
+        cmdline=CommandLineArguments(cmdline)
     return cmdline
+asCommandLine=asCommandLineArguments
+asCmdLine=asCommandLineArguments
+asCmdine=asCommandLineArguments
