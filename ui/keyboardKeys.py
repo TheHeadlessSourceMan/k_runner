@@ -7,6 +7,7 @@ import ctypes
 import win32gui
 import win32api
 import win32con
+import win32com.client
 
 
 # Map virtual key codes for media keys
@@ -222,7 +223,7 @@ def asKeyCode(keyCode:typing.Union[int,str])->int:
         return keyCode
     if len(keyCode)==1:
         # regular key
-        encoded=ord(keyCode.encode('utf-16'))
+        encoded=ord(keyCode)
         return ctypes.windll.User32.VkKeyScanW(encoded)
     # special key
     keyCode=keyCode.replace('[','').replace(']','').strip()\
@@ -267,26 +268,68 @@ def sendKeyboardKey(
     want to try pressKeys() instead.
     """
     original=keyCode
-    keyCode=asKeyCode(keyCode)
-    if keyCode==0:
+    if isinstance(keyCode, str) and len(keyCode) == 1:
+        vkCombo = ctypes.windll.user32.VkKeyScanW(ord(keyCode))
+        keyCode = vkCombo & 0xFF
+        modifiers = (vkCombo >> 8) & 0xFF
+    else:
+        keyCode = asKeyCode(keyCode)
+        modifiers = 0
+    if keyCode<=0:
         raise EncodingWarning(
             f'Unable to translate "{original}" to keystrokes')
-    if not inBackground or hWnd is None:
+    if not inBackground:
         if hWnd is not None:
-            win32gui.SetForegroundWindow(hWnd)
-        extra=ctypes.c_ulong(0)
-        ii_=INPUT._INPUT() # pylint: disable=protected-access
-        ii_.ki=KEYBDINPUT(keyCode,0,0,0,ctypes.pointer(extra)) # pylint: disable=attribute-defined-outside-init # noqa: E501
-        x=INPUT(ctypes.c_ulong(1),ii_)
-        # Key down
-        ctypes.windll.user32.SendInput(1,ctypes.pointer(x),ctypes.sizeof(x))
-        # Key up
-        ii_.ki=KEYBDINPUT(keyCode,0,2,0,ctypes.pointer(extra)) # pylint: disable=attribute-defined-outside-init # noqa: E501
-        x=INPUT(ctypes.c_ulong(1),ii_)
-        ctypes.windll.user32.SendInput(1,ctypes.pointer(x),ctypes.sizeof(x))
+            # Restore and bring to foreground
+            windowInfo = win32gui.GetWindowPlacement(hWnd)
+            if windowInfo[1] == win32con.SW_SHOWMINIMIZED:
+                win32gui.ShowWindow(hWnd, win32con.SW_RESTORE)
+            try:
+                win32gui.SetForegroundWindow(hWnd)
+            except Exception:
+                pass
+        # Use SendInput for foreground typing
+        extra = ctypes.c_ulong(0)
+        ii = INPUT._INPUT()
+        ii.ki = KEYBDINPUT(keyCode, 0, 0, 0, ctypes.pointer(extra))
+        input_struct = INPUT(ctypes.c_ulong(1), ii)
+        ctypes.windll.user32.SendInput(1, ctypes.pointer(input_struct), ctypes.sizeof(input_struct))
+        time.sleep(0.01)
+        ii.ki = KEYBDINPUT(keyCode, 0, 2, 0, ctypes.pointer(extra))
+        input_struct = INPUT(ctypes.c_ulong(1), ii)
+        ctypes.windll.user32.SendInput(1, ctypes.pointer(input_struct), ctypes.sizeof(input_struct))
     else:
-        win32api.SendMessage(hWnd,win32con.WM_KEYDOWN,keyCode,0)
-        win32api.SendMessage(hWnd,win32con.WM_KEYUP,keyCode,0)
+        if hWnd is None:
+            return  # Cannot send to background with no hWnd
+
+        scanCode = win32api.MapVirtualKey(keyCode, 0)
+        lParam_down = 0x00000001 | (scanCode << 16)
+        lParam_up = 0xC0000001 | (scanCode << 16)
+
+        # Send modifiers first if necessary
+        if modifiers & 1:  # Shift
+            modScan = win32api.MapVirtualKey(VK_SHIFT, 0)
+            win32gui.SendMessage(hWnd, win32con.WM_KEYDOWN, VK_SHIFT, 0x00000001 | (modScan << 16))
+        if modifiers & 2:  # Ctrl
+            modScan = win32api.MapVirtualKey(VK_CONTROL, 0)
+            win32gui.SendMessage(hWnd, win32con.WM_KEYDOWN, VK_CONTROL, 0x00000001 | (modScan << 16))
+        if modifiers & 4:  # Alt
+            modScan = win32api.MapVirtualKey(VK_MENU, 0)
+            win32gui.SendMessage(hWnd, win32con.WM_KEYDOWN, VK_MENU, 0x00000001 | (modScan << 16))
+
+        win32gui.SendMessage(hWnd, win32con.WM_KEYDOWN, keyCode, lParam_down)
+        if 0x30 <= keyCode <= 0x5A:  # A-Z, 0-9
+            win32gui.SendMessage(hWnd, win32con.WM_CHAR, keyCode, lParam_down)
+        time.sleep(0.01)
+        win32gui.SendMessage(hWnd, win32con.WM_KEYUP, keyCode, lParam_up)
+
+        # Release modifiers
+        if modifiers & 4:
+            win32gui.SendMessage(hWnd, win32con.WM_KEYUP, VK_MENU, 0xC0000001 | (modScan << 16))
+        if modifiers & 2:
+            win32gui.SendMessage(hWnd, win32con.WM_KEYUP, VK_CONTROL, 0xC0000001 | (modScan << 16))
+        if modifiers & 1:
+            win32gui.SendMessage(hWnd, win32con.WM_KEYUP, VK_SHIFT, 0xC0000001 | (modScan << 16))
 sendKeyboard=sendKeyboardKey
 pressKey=sendKeyboardKey
 sendKey=sendKeyboardKey

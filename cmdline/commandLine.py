@@ -377,6 +377,9 @@ class CommandLineArguments:
         """
         Shell escape the args
         """
+        if isinstance(s,Path):
+            return s # This is good by definition
+        s=str(s)
         for c in self.invalidOsChars:
             s=s.replace(c,'\\'+c)
         return s

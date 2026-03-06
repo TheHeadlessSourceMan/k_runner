@@ -152,7 +152,7 @@ class Application:
             0,# in buffer size
             0,# timeout
             None)
-        overlapped=pywintypes.OVERLAPPED() # pylint: disable=no-member 
+        overlapped=pywintypes.OVERLAPPED() # pylint: disable=no-member
 
         overlapped.hEvent=win32event.CreateEvent(None,1,0,None)
         win32pipe.ConnectNamedPipe(openscadInputPipe,overlapped)
@@ -176,7 +176,7 @@ class Application:
                         raise e
                 time.sleep(0.5)
             print('Write thread exited gracefully')
-        writeThread=threading.Thread(target=_writer)
+        writeThread=threading.Thread(target=_writer,daemon=True)
         writeThread.start()
         # a named pipe to get output from OpenSCAD
         openscadOutputFilename=r'\\.\pipe\openscadOutputPipe.png'
@@ -206,10 +206,10 @@ class Application:
                         raise e
                 time.sleep(0.5)
             print('Read thread exited gracefully')
-        readThread=threading.Thread(target=_reader)
+        readThread=threading.Thread(target=_reader,daemon=True)
         readThread.start()
         # this is a sample command line to run openscad
-        # unfortunately,openscad uses the wrong file open,so this does not work
+        # unfortunately,openscad uses the wrong file open, so this does not work
         cmd=[
             self.openscadProgram,
             '-o',
@@ -354,9 +354,11 @@ class Application:
         self.fErr=hStderr_r
         self.pid=dwProcessId
         # The watchdog
-        threading.Thread(target=self._wDogThread).start()
+        t=threading.Thread(target=self._wDogThread,daemon=True)
+        t.start()
         # The stdout loop
-        threading.Thread(target=self._stdoutReadThread).start()
+        t=threading.Thread(target=self._stdoutReadThread,daemon=True)
+        t.start()
         # The stderr loop
         try:
             err=""

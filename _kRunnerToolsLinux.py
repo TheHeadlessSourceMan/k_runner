@@ -175,9 +175,11 @@ class Application:
         # the current process,not an arbitrary pid
         #os.nice(self.process.pid,priorityBoost)
         # The watchdog
-        threading.Thread(target=self._wDogThread).start()
+        t=threading.Thread(target=self._wDogThread,daemon=True)
+        t.start()
         # The stdout loop
-        threading.Thread(target=self._stdoutReadThread).start()
+        t=threading.Thread(target=self._stdoutReadThread,daemon=True)
+        t.start()
         # The stderr loop
         result=None
         while result is None \

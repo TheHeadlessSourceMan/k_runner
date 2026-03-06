@@ -608,7 +608,7 @@ class RecieveDataManager(DataRecievedCallbacks):
         """
         if self._notifyThread is None:
             self._notifyThread=Thread(
-                target=self._notifyThreadLoop)
+                target=self._notifyThreadLoop,daemon=True)
             self._notifyThread.start()
 
     def stop(self):

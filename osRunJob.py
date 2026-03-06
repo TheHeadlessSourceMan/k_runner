@@ -154,7 +154,7 @@ class OsRunJob(RecieveDataManager,Process):
             try:
                 os.chdir(str(workingDirectory))
             except Exception as e:
-                msg=f'Unable to access "{workingDirectory}"'
+                msg=f'Invalid working directory "{workingDirectory}"'
                 raise FileNotFoundError(msg) from e
         if self.osRun.priority!=MEDIUM_PRIORITY:
             if os.name=='nt':
@@ -249,11 +249,13 @@ class OsRunJob(RecieveDataManager,Process):
                 self._running=False
                 self.stop()
         self._outThread=Thread(target=_readerThread,
-            args=(self.STDOUT,self._popen.stdout))
+            args=(self.STDOUT,self._popen.stdout),
+            daemon=True)
         self._outThread.daemon=True # thread shuts down when our thread does
         self._outThread.start()
         self._errThread=Thread(target=_readerThread,
-            args=(self.STDERR,self._popen.stderr))
+            args=(self.STDERR,self._popen.stderr),
+            daemon=True)
         self._errThread.daemon=True # thread shuts down when our thread does
         self._errThread.start()
         # returns immediately, leaving the program to run
