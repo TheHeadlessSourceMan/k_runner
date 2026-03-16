@@ -93,7 +93,8 @@ class OsRun(DataRecievedCallbacks):
         ansiHandling:str="strip",
         showHidden:bool=False,
         showMinimized:bool=False,
-        showMaximized:bool=False
+        showMaximized:bool=False,
+        env:typing.Optional[EnvironmentVariablesCompatible]=None # alias for compatability
         ):
         """
         :param workingDirectory: perform the operation in a specific directory
@@ -118,7 +119,10 @@ class OsRun(DataRecievedCallbacks):
         if workingDirectory is not None:
             self.workingDirectory=Path(workingDirectory).absolute()
         if environmentVariables is None:
-            environmentVariables=EnvironmentVariables(os.environ)
+            if env is not None:
+                environmentVariables=EnvironmentVariables(env)
+            else:
+                environmentVariables=EnvironmentVariables(os.environ)
         else:
             environmentVariables=EnvironmentVariables(environmentVariables)
         self._environmentVariables:EnvironmentVariables=environmentVariables
