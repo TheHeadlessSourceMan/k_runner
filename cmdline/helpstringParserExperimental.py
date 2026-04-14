@@ -1,5 +1,9 @@
+"""
+Experimental tool to decode application's
+name, usage, and parameters from its help string
+"""
 import typing
-import re as re
+import re
 from paths import UrlCompatible,asUrl
 
 
@@ -34,7 +38,7 @@ class Param:
 
     def __repr__(self):
         return self.toHelpString()
-    
+
     def _miniToHelpString(self)->str:
         ret=[self.name]
         if self.aliases:
@@ -74,6 +78,9 @@ class Param:
 
 
 class Params:
+    """
+    A set of Param objects
+    """
     def __init__(self):
         # NOTE: the same param may appear more than once in
         # the dict, eg. "-h" and "--help"
@@ -99,6 +106,9 @@ class Params:
 
 
 class CmdLineInfo:
+    """
+    Information about a particular command line
+    """
     def __init__(self,executable:typing.Optional[UrlCompatible]=None,helpCommand:str='--help'):
         self.executable:typing.Optional[UrlCompatible]=None
         self.usage:str=''
@@ -131,7 +141,8 @@ class CmdLineInfo:
         lastParam:typing.Optional[Param]=None
         self.params=Params()
         usageRe=re.compile(r'us(e|((e)?(age)))((\s*:\s*)|(\s+))(?P<contents>.*)',re.IGNORECASE)
-        optionSplitRe=re.compile(r'(?P<params>(-[^\s,]+\s*,\s*)*(-[^\s,]+))[\s.,]+(?P<description>.*)',re.IGNORECASE)
+        optionSplitRe=re.compile(
+            r'(?P<params>(-[^\s,]+\s*,\s*)*(-[^\s,]+))[\s.,]+(?P<description>.*)',re.IGNORECASE)
         for line in helpText.split('\n'):
             line_s=line.lstrip()
             if line_s:
