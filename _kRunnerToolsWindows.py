@@ -16,6 +16,7 @@ import win32security # type: ignore
 #import msvcrt
 import win32api # type: ignore
 from k_runner.dataRecievedCallbacks import ApplicationCallbacks
+from k_runner.settings import useDaemonThreads
 
 
 def getWindowsByPid(pid:int)->typing.Iterable[int]:
@@ -176,7 +177,7 @@ class Application:
                         raise e
                 time.sleep(0.5)
             print('Write thread exited gracefully')
-        writeThread=threading.Thread(target=_writer,daemon=True)
+        writeThread=threading.Thread(target=_writer,daemon=useDaemonThreads)
         writeThread.start()
         # a named pipe to get output from OpenSCAD
         openscadOutputFilename=r'\\.\pipe\openscadOutputPipe.png'
@@ -206,7 +207,7 @@ class Application:
                         raise e
                 time.sleep(0.5)
             print('Read thread exited gracefully')
-        readThread=threading.Thread(target=_reader,daemon=True)
+        readThread=threading.Thread(target=_reader,daemon=useDaemonThreads)
         readThread.start()
         # this is a sample command line to run openscad
         # unfortunately,openscad uses the wrong file open, so this does not work
@@ -354,10 +355,10 @@ class Application:
         self.fErr=hStderr_r
         self.pid=dwProcessId
         # The watchdog
-        t=threading.Thread(target=self._wDogThread,daemon=True)
+        t=threading.Thread(target=self._wDogThread,daemon=useDaemonThreads)
         t.start()
         # The stdout loop
-        t=threading.Thread(target=self._stdoutReadThread,daemon=True)
+        t=threading.Thread(target=self._stdoutReadThread,daemon=useDaemonThreads)
         t.start()
         # The stderr loop
         try:

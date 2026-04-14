@@ -7,6 +7,7 @@ import traceback
 from threading import Thread
 from queue import Queue,Empty
 import codecs
+from .settings import useDaemonThreads
 
 
 StringNotify=typing.Callable[[str],None]
@@ -608,7 +609,7 @@ class RecieveDataManager(DataRecievedCallbacks):
         """
         if self._notifyThread is None:
             self._notifyThread=Thread(
-                target=self._notifyThreadLoop,daemon=True)
+                target=self._notifyThreadLoop,daemon=useDaemonThreads)
             self._notifyThread.start()
 
     def stop(self):

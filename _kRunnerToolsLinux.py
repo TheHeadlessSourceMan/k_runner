@@ -13,6 +13,7 @@ try:
 except ImportError:
     hasPyEv=False
 from .dataRecievedCallbacks import ApplicationCallbacks
+from .settings import useDaemonThreads
 
 
 def hideAllWindows(pid:int,hide:bool=True)->None:
@@ -175,10 +176,10 @@ class Application:
         # the current process,not an arbitrary pid
         #os.nice(self.process.pid,priorityBoost)
         # The watchdog
-        t=threading.Thread(target=self._wDogThread,daemon=True)
+        t=threading.Thread(target=self._wDogThread,daemon=useDaemonThreads)
         t.start()
         # The stdout loop
-        t=threading.Thread(target=self._stdoutReadThread,daemon=True)
+        t=threading.Thread(target=self._stdoutReadThread,daemon=useDaemonThreads)
         t.start()
         # The stderr loop
         result=None

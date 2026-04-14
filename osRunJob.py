@@ -17,6 +17,7 @@ from .osRunResult import OsRunResult
 from .dataRecievedCallbacks import RecieveDataManager
 from .processes import Process,MEDIUM_PRIORITY
 from .cmdline import CommandLine
+from .settings import useDaemonThreads
 if typing.TYPE_CHECKING:
     from osrun import OsRun
 
@@ -250,13 +251,13 @@ class OsRunJob(RecieveDataManager,Process):
                 self.stop()
         self._outThread=Thread(target=_readerThread,
             args=(self.STDOUT,self._popen.stdout),
-            daemon=True)
-        self._outThread.daemon=True # thread shuts down when our thread does
+            daemon=useDaemonThreads)
+        self._outThread.daemon=useDaemonThreads # thread shuts down when our thread does
         self._outThread.start()
         self._errThread=Thread(target=_readerThread,
             args=(self.STDERR,self._popen.stderr),
-            daemon=True)
-        self._errThread.daemon=True # thread shuts down when our thread does
+            daemon=useDaemonThreads)
+        self._errThread.daemon=useDaemonThreads # thread shuts down when our thread does
         self._errThread.start()
         # returns immediately, leaving the program to run
 
