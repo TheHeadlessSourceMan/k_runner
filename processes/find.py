@@ -6,8 +6,8 @@ import os
 from pathlib import Path
 import psutil
 if os.name=='nt':
-    import win32process # type: ignore
-    import win32gui # type: ignore
+    import win32process # type: ignore # pylint: disable=import-error
+    import win32gui # type: ignore # pylint: disable=import-error
 from k_runner.ui.windowHandleType import WindowHandleType # pylint: disable = wrong-import-position # noqa:E501
 from .process import Process # pylint: disable = wrong-import-position
 
@@ -30,6 +30,10 @@ def findSystemProcesses(
     )->typing.Iterable[Process]:
     """
     Find all system processes that match
+
+    NOTE: sometimes you may want to use findSystemProcessesSmart instead
+    as it can automatically search for interpreted languages such
+    as python scripts.
     """
     for proc in allSystemProcesses():
         # match the process name
