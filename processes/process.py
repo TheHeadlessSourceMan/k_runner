@@ -11,10 +11,10 @@ import datetime
 from pathlib import Path
 import psutil
 if os.name=='nt':
-    import win32api # type: ignore
-    import win32process # type: ignore
-    import win32con # type: ignore
-    import pywintypes # type: ignore
+    import win32api # type: ignore # pylint: disable=import-error
+    import win32process # type: ignore # pylint: disable=import-error
+    import win32con # type: ignore # pylint: disable=import-error
+    import pywintypes # type: ignore # pylint: disable=import-error
 try:
     import codeTools.debuggerManager as debuggerManager # type: ignore
     from codeTools import ProgramDebugInfo # type: ignore
@@ -25,6 +25,7 @@ except ImportError:
 from k_runner import EnvironmentVariables # pylint: disable=wrong-import-position # noqa: E501
 from .asProcess import ProcessCompatible # noqa: E402,E501 # pylint: disable=wrong-import-position,line-too-long
 from .exceptions import ProcessNotSpecifiedException # pylint: disable=wrong-import-position # noqa: E501
+from .processStats import ProcessStats # pylint: disable=wrong-import-position
 if typing.TYPE_CHECKING:
     from k_runner.ui.window import Window
     from k_runner.ui.windowHandleType import WindowHandleType
@@ -112,6 +113,16 @@ class Process:
         if hasattr(self._psutilProcess,'uids'):
             self.uids=self._psutilProcess.uids # type: ignore
         self.username=self._psutilProcess.username
+
+    @property
+    def stats(self)->ProcessStats:
+        """
+        Stats for this process
+
+        TIP: you can watch these stats for changes
+        with myProcess.stats.watch(callbackFns)
+        """
+        return ProcessStats(self)
 
     @property
     def environmentVariables(self)->EnvironmentVariables:
@@ -338,6 +349,25 @@ class Process:
         making it incompatible with psutil.Process
         """
         return self.commandLine
+    @property
+    def argv(self)->typing.List[str]:
+        """
+        sys argv value
+        """
+        return self.commandLine
+    @property
+    def argc(self)->int:
+        """
+        sys argc value
+        (count of command line arguments including application name)
+        """
+        return len(self.commandLine)
+    @property
+    def args(self)->typing.List[str]:
+        """
+        command line arguments excluding the application name
+        """
+        return self.commandLine[1:]
 
     @property
     def modules(self)->typing.Iterable[str]:
