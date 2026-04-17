@@ -136,8 +136,8 @@ class Application:
         This is something I was fiddling with to speed up file i/o.
         Rather than writing to disk,it reads/writes to named pipes.
 
-        Unfortunately,it has problems.  Namely,if the target program does
-        not use the proper windows api for opening files,it will not understand
+        Unfortunately, it has problems.  Namely, if the target program does
+        not use the proper windows api for opening files, it will not understand
         unc paths and barf all over the place.
         """
         self._imgData=None

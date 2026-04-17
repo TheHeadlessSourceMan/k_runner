@@ -29,11 +29,12 @@ class InterpreterProcess(Process):
         Process.__init__(self,interpreterProcess.pid)
 
     @property
-    def commandLine(self)->typing.List[str]:
+    def commandLine(self # type: ignore
+        )->typing.List[str]:
         """
         Get the command line for the application
         """
-        return self.interpreterProcess.commandLine[1:]
+        return list(self.interpreterProcess.commandLine)[1:]
 
     @property
     def interpreterProcess(self)->Process:

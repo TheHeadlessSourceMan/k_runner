@@ -93,7 +93,7 @@ class ProcessStats:
         """
         ret={}
         ret['command']=self.process.commandLine
-        if not self.process.isFinished:
+        if not self.process.isRunning:
             ret['cpu']=self.process.topCPU
             ret['gpu']=self.process.topGPU
             ret['mem']=self.process.topMem

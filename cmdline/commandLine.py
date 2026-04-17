@@ -31,7 +31,10 @@ class CommandLineWrapper(HelpSystemEntry):
         )->typing.Union[str,list[str]]:
         return self.commandLineOptions[idx]
 
-    def createPythonWrapperCode(self,createMainFunction:bool=False)->str:
+    def createPythonWrapperCode(self,
+        createMainFunction:bool=False,
+        tabFormat:str='    '
+        )->str:
         """
         Create python code (in a string) that wraps the command line call
 
@@ -132,7 +135,7 @@ class CommandLineWrapper(HelpSystemEntry):
             code.append('\t\tprint err')
             code.append('\telse:')
             code.append('\t\tprint out')
-        return '\n'.join(code)
+        return '\n'.join(code).replace('\t',tabFormat)
     createPythonWrapper=createPythonWrapperCode
 
     def savePythonWrapper(self,
@@ -249,7 +252,7 @@ class CommandLineArguments:
         """
         return CommandLineParameterInfo(self)
 
-    def __iter__(self)->typing.Iterable[str]:
+    def __iter__(self)->typing.Iterator[str]:
         """
         Access like an array of parameter strings
         """
@@ -359,12 +362,27 @@ class CommandLineArguments:
         """
         self._argv.clear()
 
-    def asString(self)->str:
+    def commandLineArgs(self,shellReplace:bool=False)->typing.Iterable[str]:
+        """
+        Get command line args list of values.
+        """
+        if shellReplace:
+            try:
+                import osTools
+                args=osTools.expandvars(self._argv)
+            except ImportError as e:
+                print(e)
+        args=self._argv
+        return [self._shellEscape(arg) for arg in args]
+
+    def asString(self,
+        shellReplace:bool=False
+        )->str:
         """
         Get as a string
         """
-        args=[self._enquote(self._shellEscape(arg)) for arg in self._argv]
-        return ' '.join(args)
+        args=self.commandLineArgs(shellReplace)
+        return ' '.join([self._enquote(arg) for arg in args])
     toString=asString
 
     def _enquote(self,s:str)->str:

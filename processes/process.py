@@ -237,6 +237,105 @@ class Process:
         Is the process running?
         """
         return not self.isRunning
+    @property
+    def isFinished(self)->bool:
+        """
+        Is the process running?
+        """
+        return not self.isRunning
+    @property
+    def finished(self)->bool:
+        """
+        Is the process running?
+        """
+        return not self.isRunning
+
+    @property
+    def returnCode(self)->typing.Optional[int]:
+        """
+        Get the command line exit status
+
+        TODO: I don't know if I like how this is being done
+        """
+        result=self._psutilProcess.wait(0.001)
+        return result # type: ignore
+    @property
+    def returnValue(self)->typing.Optional[int]:
+        """
+        Get the command line exit status
+        """
+        return self.returnCode
+    @property
+    def exitStatus(self)->typing.Optional[int]:
+        """
+        Get the command line exit status
+        """
+        return self.returnCode
+    @property
+    def exitCode(self)->typing.Optional[int]:
+        """
+        Get the command line exit status
+        """
+        return self.returnCode
+
+    @property
+    def currentMem(self)->float:
+        """
+        Current memory useage
+        """
+        ret=self.memory_full_info
+        print(ret)
+        raise NotImplementedError()
+        #return ret.amt
+
+    @property
+    def topMem(self)->float:
+        """
+        Top memory useage
+        """
+        ret=self.memory_full_info
+        print(ret)
+        raise NotImplementedError()
+        #return ret.amt
+
+    @property
+    def currentCPU(self)->float:
+        """
+        Current cpu useage
+        """
+        if not self.isRunning:
+            return 0
+        return self._psutilProcess.cpu_percent()
+
+    @property
+    def topCPU(self)->float:
+        """
+        Top cpu useage
+        """
+        if not self.isRunning:
+            return 0
+        print(self._psutilProcess.cpu_times())
+        raise NotImplementedError()
+
+    @property
+    def currentGPU(self)->float:
+        """
+        Current gpu useage
+        """
+        if not self.isRunning:
+            return 0
+        print(self._psutilProcess.cpu_times())
+        raise NotImplementedError()
+
+    @property
+    def topGPU(self)->float:
+        """
+        Top gpu useage
+        """
+        if not self.isRunning:
+            return 0
+        print(self._psutilProcess.cpu_times())
+        raise NotImplementedError()
 
     @property
     def startTime(self)->datetime.datetime:
@@ -257,6 +356,29 @@ class Process:
         When was the process started
         """
         return self.startTime
+    @property
+    def endTime(self)->typing.Optional[datetime.datetime]:
+        """
+        get the time the process ended
+        may return None if it doesn't know,
+        eg, the process has not ended
+
+        TODO: oses do not keep track of this, so we
+        may have to watch the process and grab the time
+        """
+        return None
+
+    @property
+    def executionTime(self)->typing.Optional[datetime.timedelta]:
+        """
+        get the time the process ran for
+        may return None if it doesn't know,
+        eg, the process has not ended
+        """
+        endTime=self.endTime
+        if endTime is None:
+            return None
+        return self.startTime-endTime
 
     @property
     def children(self)->typing.Iterable["Process"]:
@@ -354,7 +476,7 @@ class Process:
         """
         sys argv value
         """
-        return self.commandLine
+        return list(self.commandLine)
     @property
     def argc(self)->int:
         """
@@ -367,7 +489,7 @@ class Process:
         """
         command line arguments excluding the application name
         """
-        return self.commandLine[1:]
+        return self.argv[1:]
 
     @property
     def modules(self)->typing.Iterable[str]:
