@@ -117,7 +117,7 @@ class OsRun(DataRecievedCallbacks):
         self.debug:bool=debug # print the command input and output for debugging # noqa: E501 # pylint: disable=line-too-long
         self.workingDirectory:typing.Optional[Path]=None
         if workingDirectory is not None:
-            self.workingDirectory=Path(workingDirectory).absolute()
+            self.workingDirectory=Path(str(workingDirectory)).absolute()
         if environmentVariables is None:
             if env is not None:
                 environmentVariables=EnvironmentVariables(env)
