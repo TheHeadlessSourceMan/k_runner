@@ -16,9 +16,9 @@ import typing
 import os
 from .dataRecievedCallbacks import ApplicationCallbacks
 if os.name=='nt':
-    from _kRunnerToolsWindows import Application
+    from ._kRunnerToolsWindows import Application
 else:
-    from _kRunnerToolsLinux import Application # type: ignore
+    from ._kRunnerToolsLinux import Application # type: ignore
 
 # -------------- Api
 def run(

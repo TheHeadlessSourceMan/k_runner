@@ -3,9 +3,9 @@ Extension of osrun to filter the execution output
 """
 import typing
 import re
-from cmdline.asCommandLine import CommandLineCompatible
-from cmdline.commandLine import CommandLine
-from k_runner.osrun import OsRun
+from .cmdline.asCommandLine import CommandLineCompatible
+from .cmdline.commandLine import CommandLine
+from .osrun import OsRun
 
 
 class FilterRun:

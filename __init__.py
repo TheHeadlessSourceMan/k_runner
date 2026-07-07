@@ -2,6 +2,7 @@
 This module is for smartly running system commands
 and processing their io streams.
 """
+from .cmdline import *
 from .environmentVariables import *
 from .kRunnerTools import *
 from .pyErrRun import *
@@ -11,6 +12,7 @@ from .osrun import *
 from .osRunJob import *
 from .osRunResult import *
 from .dataRecievedCallbacks import *
+from .filterRun import *
 
 from .cmdline import *
 
