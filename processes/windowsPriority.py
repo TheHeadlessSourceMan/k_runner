@@ -3,7 +3,7 @@ Process priority functions for windows
 """
 
 
-from processes.priorityConstants import (
+from .priorityConstants import (
     BELOW_NORMAL_PRIORITY,
     NORMAL_PRIORITY,
     ABOVE_NORMAL_PRIORITY,

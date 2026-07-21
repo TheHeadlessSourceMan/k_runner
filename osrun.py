@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 import json
 from k_runner.dataRecievedCallbacks import DataRecievedCallbacks
-from k_runner.processes.priority import MEDIUM_PRIORITY
+from k_runner.processes import MEDIUM_PRIORITY
 from k_runner.osRunResult import OsRunResult
 from k_runner.osRunJob import OsRunJob
 from k_runner.cmdline import CommandLineCompatible,CommandLine
