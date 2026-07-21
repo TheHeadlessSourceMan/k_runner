@@ -63,7 +63,7 @@ class PossiblyRunningApplication:
         for filename in self.alsoLocks:
             if os.sep=='\\':
                 filename=Path(str(filename).lower())
-            if filename==otherFilename:
+            if str(filename)==otherFilename:
                 return True
         return False
 
@@ -79,7 +79,7 @@ class PossiblyRunningApplication:
         for p in psutil.process_iter(['name','exe','cmdline']):
             proc=Process(p)
             processFullFilename=str(proc.executableFile)
-            if processFullFilename is None or not processFullFilename:
+            if not processFullFilename:
                 continue
             if os.sep=='\\':
                 # windows filenames are not case-sensitive
@@ -119,7 +119,10 @@ kill=stopAllProcesses
 
 def temporarilyStopAllProcesses(
     application:str,
-    runBeforeRestarting:typing.Union[typing.Callable,str,typing.Iterable[str]]
+    runBeforeRestarting:typing.Union[
+        typing.Callable[[],typing.Any],
+        str,
+        typing.Iterable[str]]
     )->typing.Any:
     """
     :runBeforeRestarting: can be a python function, or one
@@ -134,12 +137,12 @@ def temporarilyStopAllProcesses(
         an exception
     """
     runFnException=None
-    result=None
+    result:typing.Any=None
     px=PossiblyRunningApplication(application)
     px.stop()
     if callable(runBeforeRestarting):
         try:
-            result=typing.cast(typing.Callable,runBeforeRestarting)()
+            result=runBeforeRestarting()
         except Exception as e:
             runFnException=e
     else:
@@ -168,9 +171,9 @@ def cmdline(args:typing.Iterable[str])->int:
     printHelp=False
     stop=None
     temporarilyStop=None
-    stray=[]
+    stray:typing.List[str]=[]
     dashMode=False
-    dashModeArgv=[]
+    dashModeArgv:typing.List[str]=[]
     # process the supplied args
     for arg in args:
         if dashMode:

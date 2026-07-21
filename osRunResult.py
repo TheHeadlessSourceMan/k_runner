@@ -10,7 +10,20 @@ class OsRunResult:
     result of an OsRun operation
     """
 
-    def __init__(self,returncode:int,stdout:str,stderr:str,stdouterr:str):
+    def __init__(self,
+        returncode:int,
+        stdout:str,
+        stderr:str,
+        stdouterr:str):
+        """
+        Initialize an OsRunResult instance
+
+        Args:
+            returncode (int): The return code of the operation
+            stdout (str): The standard output of the operation
+            stderr (str): The standard error of the operation
+            stdouterr (str): The combined standard output and error
+        """
         self.returncode:int=returncode
         self.stdout:str=stdout
         self.stderr:str=stderr
@@ -68,11 +81,11 @@ class OsRunResult:
         ret['returncode']=self.returncode
         if not self.finished:
             ret['finished']=self.finished
-        if self.stdout is not None and self.stdout:
+        if self.stdout:
             ret['stdout']=self.stdout
-        if self.stderr is not None and self.stderr:
+        if self.stderr:
             ret['stderr']=self.stderr
-        if self.stdouterr is not None and self.stdouterr:
+        if self.stdouterr:
             ret['stdouterr']=self.stdouterr
         return ret
     @jsonObj.setter
@@ -99,7 +112,7 @@ class OsRunResult:
         f.write(self.json.encode('utf-8'))
         f.close()
 
-    def __cmp__(self,other):
+    def __cmp__(self,other:typing.Any):
         """
         can do
             ==bool # for whether or not the result was successful

@@ -6,10 +6,31 @@ Will execute the command and return the results.
 """
 import typing
 from collections.abc import Iterable,Mapping
-from lxml import etree # type: ignore
+from lxml import etree
 from paths import URLCompatible,asURL,URL
 from k_runner import OsRun,OsRunResult
 
+class XmlElementT(typing.Protocol):
+    @property
+    def tag(self) -> str:
+        ...
+
+    @property
+    def attrib(self) -> typing.Dict[str, str]:
+        ...
+
+    @property
+    def text(self) -> typing.Optional[str]:
+        ...
+
+    def find(self, path: str) -> typing.Optional["XmlElementT"]:
+        ...
+
+    def findall(self, path: str) -> typing.List["XmlElementT"]:
+        ...
+
+    def getchildren(self) -> typing.List["XmlElementT"]:
+        ...
 
 class CommandFailedException(Exception):
     """
@@ -51,8 +72,8 @@ class CommandFailedOnMissingArgumentException(CommandFailedException):
 
 
 def commandTag(
-    cmdTag:typing.Union[URLCompatible,str,etree.ElementBase],
-    **kwargs
+    cmdTag:typing.Union[URLCompatible,str,XmlElementT],
+    **kwargs:typing.ParamSpecKwargs
     )->typing.Dict[str,OsRunResult]:
     """
     Given an xml tag of the form
@@ -138,7 +159,7 @@ def commandTag(
         cmdTag=typing.cast(typing.Union[URLCompatible,str],cmdTag)
         if not isinstance(cmdTag,str):
             # NOTE: a string is always an xml string, not a URL (for security)
-            url:URL=typing.cast(URL,asURL(cmdTag))
+            url=asURL(cmdTag)
             cmdTag=url.read()
         cmdTag=etree.fromstring(cmdTag,None)
     results:typing.Dict[str,OsRunResult]={}
@@ -152,7 +173,7 @@ def commandTag(
         If the replacement is not found, raises
         AttributeError with the point where it broke
         """
-        ret:typing.Any=replacements
+        ret:typing.Dict[str,typing.Any]=replacements
         steps=s.split('.')
         for i,step in enumerate(steps):
             if isinstance(ret,Iterable): # iterable, including strings!
@@ -182,7 +203,7 @@ def commandTag(
         """
         replace "{}" in a string with replacements
         """
-        ret=[]
+        ret:typing.List[str]=[]
         for i,replacement in enumerate(s.split('{')):
             if i==0:
                 ret.append(replacement)
@@ -192,7 +213,7 @@ def commandTag(
                 if len(rr)>1 and rr[1]:
                     ret.append(rr[1])
         return ''.join(ret)
-    def processTag(el:etree.ElementBase)->None:
+    def processTag(el:XmlElementT)->None:
         """
         Process/run a single <command> tag.
         (also runs all child tags)
@@ -219,7 +240,7 @@ def commandTag(
     processTag(cmdTag)
     return results
 
-def runCommandServer(port:int=8101,**kwargs):
+def runCommandServer(port:int=8101,**kwargs:typing.ParamSpecKwargs):
     """
     Starts up a command server on the given port
 

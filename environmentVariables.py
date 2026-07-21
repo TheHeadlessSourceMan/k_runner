@@ -28,7 +28,8 @@ class EnvironmentVariables:
     Manage a set of environment variables
     """
 
-    def __init__(self,env:typing.Optional[EnvironmentVariablesCompatible]=None):
+    def __init__(self,
+        env:typing.Optional[EnvironmentVariablesCompatible]=None):
         """
         Manage environment variables
         """
@@ -128,13 +129,16 @@ class EnvironmentVariables:
             data=self.envString
         filename.write_text(data,'utf-8',errors='ignore')
 
-    def union(self,env:EnvironmentVariablesCompatible):
+    def union(self,
+        env:typing.Optional[EnvironmentVariablesCompatible]
+        )->'EnvironmentVariables':
         """
         Create a new environment variables list
         that is a union of lists.
         """
         newEnv=EnvironmentVariables(self)
-        newEnv.append(env)
+        if env is not None:
+            newEnv.append(env)
         return newEnv
 
     def clear(self)->None:
@@ -181,7 +185,9 @@ class EnvironmentVariables:
             for k,v in env.items():
                 self._env[str(k)]=str(v)
         else:
-            env=typing.cast(typing.Iterable[EnvironmentVariablesCompatible],env)
+            env=typing.cast(
+                typing.Iterable[EnvironmentVariablesCompatible],
+                env)
             for e in env:
                 self.append(e)
     extend=append

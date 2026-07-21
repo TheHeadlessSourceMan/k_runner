@@ -23,7 +23,7 @@ class UiComponentGroup:
             typing.Dict[str,"UiComponent"]]=None
 
     def findChildren(self,
-        matching:typing.Optional[typing.Pattern]=None
+        matching:typing.Union[None,str,typing.Pattern[str]]=None
         )->typing.Generator["UiComponent",None,None]:
         """
         lookup all child windows
@@ -70,15 +70,14 @@ class UiComponentGroup:
                 if i==idx:
                     return c
             raise IndexError()
-        if isinstance(idx,str):
-            children=self.children
-            ret=self.childrenLookup.get(idx)
-            if ret is not None:
-                return ret
-            # resort to fuzzy matching
-            for c in children:
-                if c==idx:
-                    return c
+        children=self.children
+        ret=self.childrenLookup.get(idx)
+        if ret is not None:
+            return ret
+        # resort to fuzzy matching
+        for c in children:
+            if c==idx:
+                return c
         return None
     def __setitem__(self,idx:str,value:"UiComponent"):
         _=self.children

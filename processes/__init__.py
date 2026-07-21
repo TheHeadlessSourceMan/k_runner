@@ -1,6 +1,7 @@
 """
 Tools to inspect and manipulate running processes
 """
+from .priorityConstants import *
 from .exceptions import *
 from .priority import *
 from .asProcess import *

@@ -16,9 +16,9 @@ def allTopLevelHwnds()->typing.Iterable[int]:
     """
     Loop through all top level window handles
     """
-    hwnds=[]
+    hwnds:typing.List[int]=[]
     if os.name=='nt':
-        def cb(hwnd,hwnds):
+        def cb(hwnd:int,hwnds:typing.List[int]):
             hwnds.append(hwnd)
         win32gui.EnumWindows(cb,hwnds)
     else:
@@ -27,15 +27,15 @@ def allTopLevelHwnds()->typing.Iterable[int]:
 
 
 def getTopLevelWindows(
-    matching:typing.Optional[typing.Pattern[str]]=None
+    matching:typing.Union[None,str,typing.Pattern[str]]=None
     )->typing.Generator[Window,None,None]:
     """
     Get all the application windows matching a given pattern
     """
     if matching is not None and isinstance(matching,str):
         matching=re.compile(matching,re.DOTALL)
-    children=[]
-    def winEnumHandler(hwnd,ctx):
+    children:typing.List[Window]=[]
+    def winEnumHandler(hwnd:int,ctx:typing.Any):
         _=ctx
         if win32gui.IsWindowVisible(hwnd):
             title=win32gui.GetWindowText(hwnd).strip()
@@ -58,7 +58,7 @@ def findWindows(
     Find windows given a set of criteria
     """
     tape=[]
-    def appendTape(hWndChild,_=None):
+    def appendTape(hWndChild:int,_:typing.Any=None):
         tape.append(hWndChild)
     if startingAt is None:
         tape=list(allTopLevelHwnds())
@@ -87,9 +87,9 @@ def findWindows(
                 continue
         if title is not None:
             #txt=win32gui.GetWindowText(hWnd).strip()
-            txt=win32gui.GetWindowTitle(hWnd).strip()
+            txt=str(win32gui.GetWindowTitle(hWnd)).strip()
             if isinstance(title,str):
-                if not txt.lower().find(title):
+                if txt.lower().find(title)<0:
                     continue
             elif title.match(txt) is None:
                 continue

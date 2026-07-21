@@ -88,11 +88,11 @@ class DataRecievedCallbacks:
         """
         if other is None:
             return
-        for streamNum,stream in enumerate(other._byteNotifiers): # pylint: disable=protected-access
+        for streamNum,stream in enumerate(other._byteNotifiers): # noqa:E501 # pylint: disable=protected-access,line-too-long
             self.addBytesNotifies(streamNum,stream)
-        for streamNum,stream in enumerate(other._charNotifiers): # pylint: disable=protected-access
+        for streamNum,stream in enumerate(other._charNotifiers): # noqa:E501 # pylint: disable=protected-access,line-too-long
             self.addCharNotifies(streamNum,stream)
-        for streamNum,stream in enumerate(other._lineNotifiers): # pylint: disable=protected-access
+        for streamNum,stream in enumerate(other._lineNotifiers): # noqa:E501 # pylint: disable=protected-access,line-too-long
             self.addLineNotifies(streamNum,stream)
 
     def addBytesNotifies(self,
@@ -104,7 +104,7 @@ class DataRecievedCallbacks:
         if notifies is None:
             return
         if hasattr(notifies,'__iter__'):
-            notifies=typing.cast(typing.Iterable,notifies)
+            notifies=typing.cast(typing.Iterable[BytesNotify],notifies)
             self._byteNotifiers[whichStream].extend(notifies)
         else:
             notifies=typing.cast(BytesNotify,notifies)
@@ -117,7 +117,7 @@ class DataRecievedCallbacks:
         """
         try:
             if hasattr(notifies,'__iter__'):
-                notifies=typing.cast(typing.Iterable,notifies)
+                notifies=typing.cast(typing.Iterable[BytesNotify],notifies)
                 for bn in notifies:
                     self._byteNotifiers[whichStream].remove(bn)
             else:
@@ -138,20 +138,23 @@ class DataRecievedCallbacks:
         if notifies is None:
             return
         if hasattr(notifies,'__iter__'):
-            notifies=typing.cast(typing.Iterable,notifies)
+            notifies=typing.cast(typing.Iterable[StringNotify],notifies)
             self._charNotifiers[whichStream].extend(notifies)
         else:
             notifies=typing.cast(StringNotify,notifies)
             self._charNotifiers[whichStream].append(notifies)
     addCharNotify=addCharNotifies
 
-    def removeCharNotifies(self,whichStream:int,notifies:StringNotifies):
+    def removeCharNotifies(self,
+        whichStream:int,
+        notifies:StringNotifies):
         """
         Remove functions to be notified whenever a new character is added
         """
         try:
             if hasattr(notifies,'__iter__'):
-                notifies=typing.cast(typing.Iterable,notifies)
+                notifies=typing.cast(
+                    typing.Iterable[StringNotify],notifies)
                 for bn in notifies:
                     self._charNotifiers[whichStream].remove(bn)
             else:
@@ -172,7 +175,8 @@ class DataRecievedCallbacks:
         if notifies is None:
             return
         if hasattr(notifies,'__iter__'):
-            notifies=typing.cast(typing.Iterable,notifies)
+            notifies=typing.cast(
+                typing.Iterable[StringNotify],notifies)
             self._lineNotifiers[whichStream].extend(notifies)
         else:
             notifies=typing.cast(StringNotify,notifies)
@@ -185,7 +189,8 @@ class DataRecievedCallbacks:
         """
         try:
             if hasattr(notifies,'__iter__'):
-                notifies=typing.cast(typing.Iterable,notifies)
+                notifies=typing.cast(
+                    typing.Iterable[StringNotify],notifies)
                 for bn in notifies:
                     self._lineNotifiers[whichStream].remove(bn)
             else:
@@ -276,15 +281,19 @@ class RecieveDataManager(DataRecievedCallbacks):
             codecs.getincrementaldecoder(self._stringFormat)())
         self._byteBuffers:typing.Tuple[bytearray,bytearray,bytearray]=\
             (bytearray(),bytearray(),bytearray())
-        self._charBuffers:typing.Tuple[typing.List[str],typing.List[str],typing.List[str]]=\
+        self._charBuffers:typing.Tuple[
+            typing.List[str],typing.List[str],typing.List[str]]=\
             ([],[],[])
-        self._currentLineBuffers:typing.Tuple[typing.List[str],typing.List[str],typing.List[str]]=\
+        self._currentLineBuffers:typing.Tuple[
+            typing.List[str],typing.List[str],typing.List[str]]=\
             ([],[],[])
-        self._lineBuffers:typing.Tuple[typing.List[str],typing.List[str],typing.List[str]]=\
+        self._lineBuffers:typing.Tuple[
+            typing.List[str],typing.List[str],typing.List[str]]=\
             ([],[],[])
-        self._stdouterrCurrentLineChars:typing.Tuple[typing.List[str],typing.List[str]]=\
+        self._stdouterrCurrentLineChars:typing.Tuple[
+            typing.List[str],typing.List[str]]=\
             ([],[])
-        self._notifyQueue=Queue()
+        self._notifyQueue=Queue[StringNotify]()
 
     def getBytes(self,
         whichStream:int=2
@@ -296,14 +305,14 @@ class RecieveDataManager(DataRecievedCallbacks):
             return bytes(self._byteBuffers[whichStream])
         self._pauseNotifications=True
         time.sleep(0.1)
-        q=Queue()
+        q=Queue[int]()
         for b in self._byteBuffers[whichStream]:
             q.put(b)
-        def cb(value):
+        def cb(value:int):
             q.put(value)
         self.addBytesNotify(whichStream,cb)
         self._pauseNotifications=False
-        while self._notifyThread is not None:
+        while self._notifyThread is not None: # type: ignore
             try:
                 yield q.get(timeout=0.1)
             except Empty:
@@ -330,11 +339,11 @@ class RecieveDataManager(DataRecievedCallbacks):
         q=Queue[str]()
         for c in self._charBuffers[whichStream]:
             q.put(c)
-        def cb(value):
+        def cb(value:str):
             q.put(value)
         self.addCharNotify(whichStream,cb)
         self._pauseNotifications=False
-        while self._notifyThread is not None:
+        while self._notifyThread is not None: # type: ignore
             try:
                 yield from q.get(timeout=0.1)
             except Empty:
@@ -444,11 +453,11 @@ class RecieveDataManager(DataRecievedCallbacks):
         q=Queue[str]()
         for line in self._lineBuffers[whichStream]:
             q.put(line)
-        def cb(value):
+        def cb(value:str):
             q.put(value)
         self.addLineNotify(whichStream,cb)
         self._pauseNotifications=False
-        while self._notifyThread is not None:
+        while self._notifyThread is not None: # type: ignore
             try:
                 line=q.get(timeout=0.1)
                 yield line
@@ -488,20 +497,21 @@ class RecieveDataManager(DataRecievedCallbacks):
             except Exception as e:
                 traceback.print_exception(e)
                 if not hasattr(callback,'__call__'):
-                    print(f'Invalid callback type detected: "{type(callback)}"')
+                    print(f'Invalid callback type detected: "{type(callback)}"') # noqa:E501 # pylint: disable=line-too-long
                 else:
-                    print(f'Exception caused callback "{callback.__name__}" to be disabled')
+                    print(f'Exception caused callback "{callback.__name__}" to be disabled') # noqa: E501 # pylint: disable=line-too-long
                 self._byteNotifiers[whichStream].remove(callback)
-        # we'll append the bytes to the combined stream in the order they were received
+        # we'll append the bytes to the combined stream in
+        # the order they were received
         for callback in self._byteNotifiers[self.STDOUTERR]:
             try:
                 callback(b)
             except Exception as e:
                 traceback.print_exception(e)
                 if not hasattr(callback,'__call__'):
-                    print(f'Invalid callback type detected: "{type(callback)}"')
+                    print(f'Invalid callback type detected: "{type(callback)}"') # noqa: E501 # pylint: disable=line-too-long
                 else:
-                    print(f'Exception caused callback "{callback.__name__}" to be disabled')
+                    print(f'Exception caused callback "{callback.__name__}" to be disabled') # noqa: E501 # pylint: disable=line-too-long
                 self._byteNotifiers[self.STDOUTERR].remove(callback)
         # attempt to convert to character and do all that stuff
         try:
@@ -534,9 +544,9 @@ class RecieveDataManager(DataRecievedCallbacks):
             except Exception as e:
                 traceback.print_exception(e)
                 if not hasattr(callback,'__call__'):
-                    print(f'Invalid callback type detected: "{type(callback)}"')
+                    print(f'Invalid callback type detected: "{type(callback)}"') # noqa:E501 # pylint: disable=line-too-long
                 else:
-                    print(f'Exception caused callback "{callback.__name__}" to be disabled')
+                    print(f'Exception caused callback "{callback.__name__}" to be disabled') # noqa:E501 # pylint: disable=line-too-long
                 self._charNotifiers[whichStream].remove(callback)
         if c=='\n':
             lb=self._currentLineBuffers[whichStream]
@@ -558,9 +568,9 @@ class RecieveDataManager(DataRecievedCallbacks):
             except Exception as e:
                 traceback.print_exception(e)
                 if not hasattr(callback,'__call__'):
-                    print(f'Invalid callback type detected: "{type(callback)}"')
+                    print(f'Invalid callback type detected: "{type(callback)}"') # noqa:E501 # pylint: disable=line-too-long
                 else:
-                    print(f'Exception caused callback "{callback.__name__}" to be disabled')
+                    print(f'Exception caused callback "{callback.__name__}" to be disabled') # noqa:E501 # pylint: disable=line-too-long
                 self._lineNotifiers[whichStream].remove(callback)
 
     def _finishLineBuffers(self):
@@ -597,7 +607,8 @@ class RecieveDataManager(DataRecievedCallbacks):
                 time.sleep(0.01)
                 continue
             try:
-                self._notifyBytes(*self._notifyQueue.get(timeout=0.2))
+                self._notifyBytes(
+                    *self._notifyQueue.get(timeout=0.2))
             except Empty:
                 if not self._keepgoing:
                     self._finishLineBuffers()

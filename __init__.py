@@ -14,8 +14,6 @@ from .osRunResult import *
 from .dataRecievedCallbacks import *
 from .filterRun import *
 
-from .cmdline import *
-
 from .ui import *
 import k_runner.ui # pylint: disable=wrong-import-order
 import k_runner.ui as uifiddle # legacy support

@@ -37,7 +37,7 @@ class OsRunJob(RecieveDataManager,Process):
         self._running:bool=False
         self._outThread:typing.Optional[Thread]=None
         self._errThread:typing.Optional[Thread]=None
-        self._popen:typing.Optional[subprocess.Popen]=None
+        self._popen:typing.Optional[subprocess.Popen[str]]=None
         self._lastReturncode:int=-9999
         if osRun.workingDirectory is not None:
             # keep a copy in case they change it
@@ -78,7 +78,7 @@ class OsRunJob(RecieveDataManager,Process):
         """
         print(txt)
 
-    def write(self,*vals):
+    def write(self,*vals:typing.ParamSpecArgs):
         """
         Write data to the job's stdin
 
@@ -91,7 +91,7 @@ class OsRunJob(RecieveDataManager,Process):
             v=' '.join([str(v) for v in vals])
             self._popen.stdin.write(v)
             self._popen.stdin.flush()
-    def writeln(self,*vals):
+    def writeln(self,*vals:typing.ParamSpecArgs):
         """
         Write data to the job's stdin
         """
@@ -108,7 +108,8 @@ class OsRunJob(RecieveDataManager,Process):
         moreParams:typing.Optional[typing.Iterable[str]]=None,
         workingDirectory:typing.Union[None,str,Path]=None,
         moreEnvironmentVariables:typing.Optional[
-            EnvironmentVariablesCompatible]=None)->None:
+            EnvironmentVariablesCompatible]=None
+        )->None:
         """
         start the thing running
 
@@ -131,10 +132,7 @@ class OsRunJob(RecieveDataManager,Process):
             self.addLineNotify(self.STDOUTERR,self.debugLog) #register it
         # build up the command to be run
         if workingDirectory is None:
-            if self.workingDirectory is None:
-                workingDirectory=Path(os.getcwd()).absolute()
-            else:
-                workingDirectory=self.workingDirectory
+            workingDirectory=self.workingDirectory
         else:
             workingDirectory=Path(workingDirectory).absolute()
         cmd:CommandLine=CommandLine(self.osRun.cmd)
@@ -142,8 +140,8 @@ class OsRunJob(RecieveDataManager,Process):
         if moreParams is not None:
             cmd.extend(moreParams)
         environmentVariables=self.osRun.environmentVariables
-        if moreEnvironmentVariables is not None:
-            environmentVariables=environmentVariables.union(moreEnvironmentVariables)
+        environmentVariables=environmentVariables.union(
+            moreEnvironmentVariables) # type: ignore
         # launch the program
         creationflags=0
         if self.osRun.detach:
@@ -163,14 +161,11 @@ class OsRunJob(RecieveDataManager,Process):
                 #     start "" /AboveNormal "C:\Windows\System32\mspaint.exe"
                 # see also:
                 # https://www.tenforums.com/tutorials/89548-set-cpu-process-priority-applications-windows-10-a.html
-                from processes.priority import _getWindowsPriorityName
-                if workingDirectory is None:
-                    cmdPath=Path(cmd[0]).absolute()
-                else:
-                    cmdPath=workingDirectory/cmd[0]
+                from processes.priority import getPriorityName
+                cmdPath=Path(cmd[0]).absolute()
                 if not cmdPath.is_file():
                     cmdPath=Path(cmd[0])
-                winPri=_getWindowsPriorityName(self.osRun.priority)
+                winPri=getPriorityName(self.osRun.priority)
                 newCmd=CommandLine(('start','',f'/{winPri}',str(cmdPath)))
                 if len(cmd)>1:
                     newCmd.extend(cmd[1:])
@@ -201,7 +196,7 @@ class OsRunJob(RecieveDataManager,Process):
             #    shell=self.osRun.shell,
             #    stdout=subprocess.PIPE,stderr=subprocess.PIPE,
             #    bufsize=1,creationflags=creationflags,cwd=workingDirectory)
-            self._popen=subprocess.Popen(
+            self._popen=subprocess.Popen[str](
                 cmd.encodeToArray(),
                 shell=self.osRun.shell,
                 stdout=subprocess.PIPE,
@@ -219,7 +214,7 @@ class OsRunJob(RecieveDataManager,Process):
                 # If this api is available, we probably need to call it
                 os.set_blocking(self._popen.stdout.fileno(),False) # type: ignore # pylint: disable=no-member # noqa: E501
                 os.set_blocking(self._popen.stderr.fileno(),False) # type: ignore # pylint: disable=no-member # noqa: E501
-            except Exception as e:
+            except Exception: # as e:
                 pass #print('Problem with set_blocking() chunkyIO disabled')
                 #self.chunkyIO=False
         if previousDirectory is not None:
@@ -237,8 +232,10 @@ class OsRunJob(RecieveDataManager,Process):
                     if data:
                         self.addBytes(whichStream,data)
                     else:
-                        if self._popen is None or self._popen.poll() is not None:
-                            # We read nothing and the process has finished so there won't be more
+                        if self._popen is None \
+                            or self._popen.poll() is not None:
+                            # We read nothing and the process has finished
+                            # so there won't be more
                             break
                         time.sleep(0.005)
             ioObject.close()
@@ -252,12 +249,14 @@ class OsRunJob(RecieveDataManager,Process):
         self._outThread=Thread(target=_readerThread,
             args=(self.STDOUT,self._popen.stdout),
             daemon=useDaemonThreads)
-        self._outThread.daemon=useDaemonThreads # thread shuts down when our thread does
+        # make daemon sothread shuts down when our thread does
+        self._outThread.daemon=useDaemonThreads
         self._outThread.start()
         self._errThread=Thread(target=_readerThread,
             args=(self.STDERR,self._popen.stderr),
             daemon=useDaemonThreads)
-        self._errThread.daemon=useDaemonThreads # thread shuts down when our thread does
+        # make daemon sothread shuts down when our thread does
+        self._errThread.daemon=useDaemonThreads
         self._errThread.start()
         # returns immediately, leaving the program to run
 

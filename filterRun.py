@@ -20,10 +20,10 @@ class FilterRun:
         debug:bool=False):
         """ """
         self.osrun=OsRun(cmd,shell,detach,debug)
-        self.filterOut:typing.List[typing.Pattern]=[]
+        self.filterOut:typing.List[typing.Pattern[str]]=[]
 
     def addFilter(self,
-        flt:typing.Union[str,typing.Pattern],
+        flt:typing.Union[str,typing.Pattern[str]],
         compileFlags:int=0
         )->None:
         """
@@ -35,7 +35,7 @@ class FilterRun:
 
     def checkFilters(self,
         line:str,
-        filters:typing.Optional[typing.List[typing.Pattern]]=None
+        filters:typing.Optional[typing.List[typing.Pattern[str]]]=None
         )->bool:
         """
         returns True if it matches any of the given filters

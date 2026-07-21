@@ -11,7 +11,8 @@ from k_runner.processes.priority import MEDIUM_PRIORITY
 from k_runner.osRunResult import OsRunResult
 from k_runner.osRunJob import OsRunJob
 from k_runner.cmdline import CommandLineCompatible,CommandLine
-from k_runner.environmentVariables import EnvironmentVariablesCompatible,EnvironmentVariables
+from k_runner.environmentVariables import (
+    EnvironmentVariablesCompatible,EnvironmentVariables)
 
 
 class OsRun(DataRecievedCallbacks):
@@ -87,14 +88,16 @@ class OsRun(DataRecievedCallbacks):
         detach:bool=False,
         debug:bool=False,
         workingDirectory:typing.Union[None,str,Path]=None,
-        environmentVariables:typing.Optional[EnvironmentVariablesCompatible]=None,
+        environmentVariables:typing.Optional[
+            EnvironmentVariablesCompatible]=None,
         runCallbacks:typing.Optional[DataRecievedCallbacks]=None,
         priority:float=MEDIUM_PRIORITY,
         ansiHandling:str="strip",
         showHidden:bool=False,
         showMinimized:bool=False,
         showMaximized:bool=False,
-        env:typing.Optional[EnvironmentVariablesCompatible]=None # alias for compatability
+        env:typing.Optional[
+            EnvironmentVariablesCompatible]=None # alias for compatability
         ):
         """
         :param workingDirectory: perform the operation in a specific directory

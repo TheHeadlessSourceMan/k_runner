@@ -65,7 +65,7 @@ class InterpretedAppType:
         self.name=name
         self.interpreterApplications=list(interpreterApplications)
 
-    def __eq__(self,other):
+    def __eq__(self,other:typing.Any):
         other=str(other).lower()
         return other==self.name or other in self.interpreterApplications
 
@@ -94,7 +94,7 @@ def findSystemProcessesSmart(
     processName="foo.py" you have a problem because the process name
     is "python", not "foo.py".  This will account for all that.
     """
-    quickfind={}
+    quickfind:typing.Dict[str,InterpretedAppType]={}
     for typ in InterpretedAppTypes:
         for appName in typ.interpreterApplications:
             quickfind[appName]=typ

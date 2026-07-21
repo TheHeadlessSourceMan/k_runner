@@ -23,8 +23,8 @@ def getWindowsByPid(pid:int)->typing.Iterable[int]:
     """
     Get handles to all windows belonging to a certain process
     """
-    hWnds=[]
-    def onFound(hWnd,windows):
+    hWnds:typing.List[int]=[]
+    def onFound(hWnd:int,windows:typing.List[int]):
         """
         Windows needs an enumerator callback
         """
@@ -107,8 +107,8 @@ class Application:
         self.runInShell=runInShell
         self.runInShellCommandFlag=runInShellCommandFlag
         self.returnCode=None
-        self.onOutputCB:typing.Optional[typing.Callable]=None
-        self.onErrorCB:typing.Optional[typing.Callable]=None
+        self.onOutputCB:typing.Optional[typing.Callable[[str],None]]=None
+        self.onErrorCB:typing.Optional[typing.Callable[[str],None]]=None
         self._imgData=None
         self._threadsKeepGoing=True
         self.callbacks:typing.Optional[ApplicationCallbacks]=None
@@ -119,13 +119,13 @@ class Application:
         self.wDogLifetime=None
         self.wDogOutput=None
         self.hideWindows=None
-        self.dDogOutput=None
+        self.dDogOutput:typing.Optional[typing.Any]=None
         self.returncode=None
         self.process=None
         self.fIn=None
         self.fOut=None
         self.fErr=None
-        self.pid=None
+        self.pid:typing.Optional[int]=None
         self.granularity=0.010
         self.lifetimeCounter=0.0
         self.outputCounter=0.0
@@ -144,7 +144,7 @@ class Application:
         self._threadsKeepGoing=True
         # a named pipe to send input to OpenSCAD
         openscadInputFilename=r'\\.\pipe\openscadInputPipe'
-        openscadInputPipe=win32pipe.CreateNamedPipe(
+        openscadInputPipe=win32pipe.CreateNamedPipe( # type: ignore
             openscadInputFilename,# name
             win32con.PIPE_ACCESS_OUTBOUND | win32con.FILE_FLAG_OVERLAPPED, # open mode # noqa: E501 # pylint: disable=line-too-long
             win32con.PIPE_TYPE_BYTE,# pipe mode
@@ -152,7 +152,7 @@ class Application:
             len(self.openscadReplacement),# out buffer size
             0,# in buffer size
             0,# timeout
-            None)
+            None) # security attributes
         overlapped=pywintypes.OVERLAPPED() # pylint: disable=no-member
 
         overlapped.hEvent=win32event.CreateEvent(None,1,0,None)
@@ -181,7 +181,7 @@ class Application:
         writeThread.start()
         # a named pipe to get output from OpenSCAD
         openscadOutputFilename=r'\\.\pipe\openscadOutputPipe.png'
-        openscadOutputPipe=win32pipe.CreateNamedPipe(
+        openscadOutputPipe=win32pipe.CreateNamedPipe( # type: ignore
             openscadOutputFilename,# name
             win32pipe.PIPE_ACCESS_INBOUND,# open mode
             win32pipe.PIPE_TYPE_BYTE,# pipe mode
@@ -247,8 +247,8 @@ class Application:
         callbacks:typing.Optional[ApplicationCallbacks]=None,
         hideWindows:bool=False,
         priorityBoost:int=0,
-        wDogOutput=None,
-        wDogLifetime=None
+        wDogOutput:typing.Optional[typing.Any]=None,
+        wDogLifetime:typing.Optional[float]=None
         )->int:
         """
         runs a program (via the windows API)
@@ -320,7 +320,7 @@ class Application:
             dwFlags=win32process.HIGH_PRIORITY_CLASS
         elif priorityBoost==3:
             dwFlags=win32process.REALTIME_PRIORITY_CLASS
-        def MakeHandleLessStupid(handle):
+        def MakeHandleLessStupid(handle:typing.Any):
             """
             Clean up handle access for async io
             """
@@ -420,6 +420,8 @@ class Application:
         """
         try:
             while self.returnCode is None:
+                if not self.pid:
+                    raise Exception("Watchdog failed. No PID to watch.")
                 if self.hideWindows:
                     hideAllWindows(self.pid)
                 if self.wDogTouch:

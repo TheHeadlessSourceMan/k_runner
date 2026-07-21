@@ -52,7 +52,7 @@ class ProcessGroup:
 
         Returns a list of them in case you want to see what closed.
         """
-        ret=[]
+        ret:typing.List[Process]=[]
         for process in self._procs:
             if not process.is_running():
                 ret.append(process)
@@ -84,9 +84,10 @@ class ProcessGroup:
             process.decreasePriority(byAmount)
 
     def filtered(self,
-        processName:typing.Union[None,str,typing.Pattern]=None,
+        processName:typing.Union[None,str,typing.Pattern[str]]=None,
         cmdline:typing.Union[None,
-            str,Path,typing.Pattern,typing.Iterable[str],Process]=None,
+            str,Path,typing.Pattern[str],
+            typing.Iterable[str],Process]=None,
         hasNetworkPortOpen:
             typing.Union[None,int,typing.Iterable[int],bool]=None,
         hasFileOpen:typing.Union[
@@ -215,8 +216,9 @@ class ProcessGroup:
         if not hasattr(processes,'__iter__'):
             processes=typing.cast(ProcessCompatible,processes)
             processes=(processes,)
-        typing.cast(typing.Iterable[ProcessCompatible],processes)
-        self._procs=self._procs.union([asProcess(p) for p in processes]) # type: ignore
+        processes=typing.cast(typing.Iterable[ProcessCompatible],processes)
+        self._procs=self._procs.union(
+            [asProcess(p) for p in processes])
     add=append
     extend=append
 

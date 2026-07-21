@@ -11,9 +11,9 @@ class Expect:
     is matched, then passes on subsequent messages
     """
     def __init__(self,
-        waitFor:typing.Union[str,typing.Pattern,None],
+        waitFor:typing.Union[str,typing.Pattern[str],None],
         thenCall:typing.Callable[[str],None],
-        untilThis:typing.Union[str,typing.Pattern],
+        untilThis:typing.Union[str,typing.Pattern[str],None],
         repeat:bool=True):
         """
         """
@@ -24,6 +24,7 @@ class Expect:
         if waitFor is None:
             self._triggered=True
             self._count=1
+            self.waitFor=None
         elif isinstance(waitFor,str):
             self.waitFor=re.compile(waitFor)
         else:

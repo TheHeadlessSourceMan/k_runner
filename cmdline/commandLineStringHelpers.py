@@ -9,7 +9,7 @@ def argvToString(argv:typing.Iterable[str])->str:
     convert a list of arguments into a string
     does helpful things like adding quotes
     """
-    ret=[]
+    ret:typing.List[str]=[]
     for arg in argv:
         if arg.find(' ')>=0 or arg.find('"')>=1:
             arg=arg.replace('\\','\\\\').replace('"','\\"')
@@ -24,7 +24,7 @@ def commandlineSplit(cmdline:typing.Union[str,typing.Iterable[str]]
     split a command line into a cmd,params[]
     (unquoting as necessary)
     """
-    cmd=''
+    cmd:str=''
     params:typing.List[str]=[]
     if not isinstance(cmdline,str):
         first=True
@@ -37,7 +37,7 @@ def commandlineSplit(cmdline:typing.Union[str,typing.Iterable[str]]
         return (cmd,params)
     inQuot=''
     delimitNextQuote=False
-    building=[]
+    building:typing.List[str]=[]
     for c in cmdline:
         if inQuot:
             if c=='\\':

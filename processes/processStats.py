@@ -84,14 +84,14 @@ class ProcessStats:
         return threading.Thread(target=watcherFn)
 
     @property
-    def jsonObj(self):
+    def jsonObj(self)->typing.Dict[str,typing.Any]:
         """
         Convert these stats to a json-compatible object
 
         If the process is running, it returns the current values.
         Otherwise it returns the top values and executuion time information.
         """
-        ret={}
+        ret:typing.Dict[str,typing.Any]={}
         ret['command']=self.process.commandLine
         if not self.process.isRunning:
             ret['cpu']=self.process.topCPU

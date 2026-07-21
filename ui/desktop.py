@@ -15,9 +15,8 @@ from win32gui import ( # type: ignore
     GetWindowRect,
     SelectObject)
 from win32service import (
-    CreateDesktop,OpenDesktop,PyHDESK,
-    GetProcessWindowStation,PyHWINSTA)
-
+    CreateDesktop,OpenDesktop,PyHDESK, # type: ignore
+    GetProcessWindowStation,PyHWINSTA) # type: ignore
 
 class _DesktopManager:
     """

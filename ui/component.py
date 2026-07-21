@@ -89,7 +89,7 @@ class UiComponent(UiComponentGroup):
         Is the window visible?
         """
         if os.name=='nt':
-            return win32gui.IsWindowVisible(self.hWnd)
+            return win32gui.IsWindowVisible(self.hWnd)!=0
         raise NotImplementedError(f'Not implemented on os="{os.name}"')
     @property
     def visible(self)->bool:
@@ -98,7 +98,7 @@ class UiComponent(UiComponentGroup):
         """
         if not self.isValid:
             return False
-        return win32gui.IsWindowVisible(self.hWnd)
+        return self.getWindowVisible()
 
     def setWindowFocus(self)->None:
         """
@@ -113,8 +113,8 @@ class UiComponent(UiComponentGroup):
         Get the child components of this component
         """
         if os.name=='nt':
-            results=[]
-            def cb(hwnd,results):
+            results:typing.List["UiComponent"]=[]
+            def cb(hwnd:int,results:typing.List["UiComponent"]):
                 results.append(UiComponent(hwnd,self))
             win32gui.EnumChildWindows(self.hWnd,cb,results)
             return results
@@ -144,7 +144,7 @@ class UiComponent(UiComponentGroup):
         return self.getChildComponents()
 
     def findChildWindows(self,
-        title:typing.Union[typing.Pattern,str,None]=None,
+        title:typing.Union[typing.Pattern[str],str,None]=None,
         recursive:bool=False
         )->typing.Generator["WindowManipulator",None,None]:
         """
@@ -203,8 +203,8 @@ class UiComponent(UiComponentGroup):
 
     def click(self,
         button:str="left",
-        count=1,
-        clickSpeedSec=0.1,
+        count:int=1,
+        clickSpeedSec:float=0.1,
         position:typing.Optional[typing.Tuple[int,int]]=None,
         metaKeys:typing.Optional[typing.Iterable[str]]=None
         )->None:
@@ -236,11 +236,11 @@ class UiComponent(UiComponentGroup):
             for n in range(count):
                 if n>0:
                     time.sleep(clickSpeedSec)
-                win32api.mouse_event(dn,x,y)
+                win32api.mouse_event(dn,x,y) # type: ignore
                 time.sleep(clickSpeedSec)
-                win32api.mouse_event(up,x,y)
+                win32api.mouse_event(up,x,y) # type: ignore
             win32api.SetCursorPos(oldPosition)
-            win32gui.SetActiveWindow(oldWindow)
+            win32gui.SetActiveWindow(oldWindow) # type: ignore
         else:
             raise NotImplementedError()
 
@@ -325,7 +325,7 @@ class UiComponent(UiComponentGroup):
         """
         if os.name=='nt':
             startupInfo=win32process.GetStartupInfo()
-            return startupInfo.wShowWindow|win32con.SW_MINIMIZE
+            return (startupInfo.wShowWindow|win32con.SW_MINIMIZE)!=0
         else:
             raise NotImplementedError()
     @minimized.setter
@@ -345,7 +345,7 @@ class UiComponent(UiComponentGroup):
         """
         if os.name=='nt':
             startupInfo=win32process.GetStartupInfo()
-            return startupInfo.wShowWindow|win32con.SW_MAXIMIZE
+            return (startupInfo.wShowWindow|win32con.SW_MAXIMIZE)!=0
         else:
             raise NotImplementedError()
     @maximized.setter
@@ -363,7 +363,7 @@ class UiComponent(UiComponentGroup):
         Restore this window from minimized state
         """
         if os.name=='nt':
-            win32gui.ShowWindow(self.hwnd,win32con.SW_RESTORE)
+            win32gui.ShowWindow(self.hWnd,win32con.SW_RESTORE)
         else:
             raise NotImplementedError()
 
@@ -371,13 +371,13 @@ class UiComponent(UiComponentGroup):
         """
         Close this window
         """
-        win32gui.PostMessage(self.hwnd,win32con.WM_CLOSE,0,0)
+        win32gui.PostMessage(self.hWnd,win32con.WM_CLOSE,0,0)
     def closeWindow(self)->None:
         """
         Close the window
         """
         if os.name=='nt':
-            win32gui.CloseWindow(self.hWnd)
+            win32gui.CloseWindow(self.hWnd) # type: ignore
         else:
             raise NotImplementedError(f'Not implemented on os="{os.name}"')
 
@@ -387,8 +387,8 @@ class UiComponent(UiComponentGroup):
 
         NOTE: Be a good citizen and use this sparingly!
         """
-        win32gui.ShowWindow(self.hwnd,5)
-        win32gui.SetForegroundWindow(self.hwnd)
+        win32gui.ShowWindow(self.hWnd,5)
+        win32gui.SetForegroundWindow(self.hWnd)
     bringToFront=makeForeground
     makeWindowForeground=makeForeground
 
@@ -399,7 +399,7 @@ class UiComponent(UiComponentGroup):
         """
         if self._pid is None:
             from k_runner.processes.find import getPidByHwnd
-            self._pid=getPidByHwnd(self.hwnd)
+            self._pid=getPidByHwnd(self.hWnd)
         return self._pid
 
     @property
@@ -417,7 +417,7 @@ class UiComponent(UiComponentGroup):
         compare if this is equal to another UiItem, a cleanTitle, or a hwnd
         """
         if isinstance(__o,str):
-            return self.hwnd==int(__o) or self.titleMatches(__o)
+            return self.hWnd==int(__o) or self.titleMatches(__o)
         elif isinstance(__o,int):
             return self.hwnd==__o
         elif hasattr(__o,'hwnd'):
@@ -429,7 +429,7 @@ class UiComponent(UiComponentGroup):
         Get the layout of the window
         """
         if os.name=='nt':
-            return win32gui.GetWindowPlacement(self.hWnd)
+            return win32gui.GetWindowPlacement(self.hWnd) # type: ignore
         raise NotImplementedError(f'Not implemented on os="{os.name}"')
     def setWindowLayout(self,
         layout:typing.Tuple[
@@ -442,7 +442,7 @@ class UiComponent(UiComponentGroup):
         Get the layout of the window
         """
         if os.name=='nt':
-            win32gui.SetWindowPos(self.hWnd,*layout)
+            win32gui.SetWindowPos(self.hWnd,*layout) # type: ignore
         else:
             raise NotImplementedError(f'Not implemented on os="{os.name}"')
     @property
@@ -554,7 +554,7 @@ class UiComponent(UiComponentGroup):
     def text(self,text:typing.Any):
         self._text=None
         text=str(text)
-        win32gui.SetWindowText(self.hWnd)
+        win32gui.SetWindowText(self.hWnd,text) # type: ignore
 
     @property
     def className(self):
@@ -566,7 +566,7 @@ class UiComponent(UiComponentGroup):
         return self._className
 
     def findChildren(self,
-        matching:typing.Optional[typing.Pattern]=None
+        matching:typing.Union[None,str,typing.Pattern[str]]=None
         )->typing.Generator["UiItem",None,None]:
         """
         lookup all child windows
@@ -578,14 +578,13 @@ class UiComponent(UiComponentGroup):
         """
         if matching is not None and isinstance(matching,str):
             matching=re.compile(matching,re.DOTALL)
-        children=[]
-        def winEnumHandler(hwnd,ctx):
+        children:typing.List["UiItem"]=[]
+        def winEnumHandler(hwnd:int,ctx:typing.Any):
             _=ctx
             if win32gui.GetParent(hwnd)==self.hWnd:
                 if matching is None or matching.match(self.title):
                     children.append(UiItem(hwnd))
-        if self.hWnd is not None and self.hWnd:
-            win32gui.EnumChildWindows(self.hWnd,winEnumHandler,None)
+        win32gui.EnumChildWindows(self.hWnd,winEnumHandler,None)
         for c in children:
             yield c
 
@@ -595,8 +594,8 @@ class UiComponent(UiComponentGroup):
         """
         def clean(
             s:str,
-            removeAllBefore=None,
-            removeAllAfter=('SAMPLE:','-')
+            removeAllBefore:typing.Optional[str]=None,
+            removeAllAfter:typing.Optional[typing.Union[str,typing.Tuple[str,...]]]=('SAMPLE:','-')
             )->str:
             """ """
             if removeAllAfter is not None:
@@ -615,7 +614,7 @@ class UiComponent(UiComponentGroup):
             for c in ' -_"':
                 s=s.replace(c,'')
             return s.lower()
-        def ignoreParens(s:str,parens='()')->str:
+        def ignoreParens(s:str,parens:str='()')->str:
             ss=s.split(parens[0])
             if len(ss)>1:
                 sList:typing.List[str]=[]
@@ -635,7 +634,12 @@ class UiComponent(UiComponentGroup):
         """
         Is the item valid?
         """
-        return (self.hWnd is not None) and self.hWnd
+        try:
+            # try and access it
+            _=self.title
+        except Exception:
+            return False
+        return True
 
     @property
     def isTab(self)->bool:
@@ -656,36 +660,40 @@ class UiComponent(UiComponentGroup):
         set the minimize animation status
         """
         _=hWnd
-        old=win32gui.SystemParametersInfo(win32con.SPI_GETANIMATION,None,None)
+        old=win32gui.SystemParametersInfo(
+            win32con.SPI_GETANIMATION,None,None) # type: ignore
         if old!=status:
             win32gui.SystemParametersInfo(
                 win32con.SPI_SETANIMATION,status,win32con.SPIF_SENDCHANGE)
         return old==1
 
-    def setTransparency(self,hWnd:int,transp:bool=True)->int:
+    def setTransparency(self,hWnd:int,transp:bool=True)->bool:
         """
         NOTE: there are several settings involved in this, so returning a
             True/False may contain assumptions that are not true!
 
         returns the original value
         """
-        wlong=win32gui.GetWindowLong(hWnd,win32con.GWL_EXSTYLE)
+        wlong:int=win32gui.GetWindowLong( # type: ignore
+            hWnd,win32con.GWL_EXSTYLE) # type: ignore
         colorKey,alpha,flags=win32gui.GetLayeredWindowAttributes(hWnd)
         _=colorKey
-        old=(wlong|win32con.WS_EX_LAYERED)>0 \
-            and alpha==1 \
-            and (flags|win32con.WS_EX_LAYERED)>0
+        test1:bool=typing.cast(bool,
+            (wlong|win32con.WS_EX_LAYERED)>0)
+        test2:bool=alpha==1
+        test3:bool=(flags|win32con.WS_EX_LAYERED)>0
+        old=test1 and test2 and test3
         if old!=transp:
             if transp:
-                win32gui.SetWindowLong(
+                win32gui.SetWindowLong( # type: ignore
                     hWnd,win32con.GWL_EXSTYLE,wlong|win32con.WS_EX_LAYERED)
-                win32gui.SetLayeredWindowAttributes(hWnd,
+                win32gui.SetLayeredWindowAttributes(hWnd, # type: ignore
                     0,1,flags|win32con.LWA_ALPHA)
             else:
-                win32gui.SetWindowLong(hWnd,
+                win32gui.SetWindowLong(hWnd, # type: ignore
                     win32con.GWL_EXSTYLE,
                     wlong&(0xfffffffffffffff|win32con.WS_EX_LAYERED))
-                win32gui.SetLayeredWindowAttributes(
+                win32gui.SetLayeredWindowAttributes(# type: ignore
                     hWnd,0,0,flags&(0xfffffffffffffff&win32con.LWA_ALPHA))
         return old
 
@@ -703,7 +711,8 @@ class UiComponent(UiComponentGroup):
             rect=win32gui.GetWindowRect(hWnd)
             w=rect[2]-rect[0]
             h=rect[3]-rect[1]
-            dc=win32ui.CreateDCFromHandle(win32gui.GetDC(0))
+            dc=win32ui.CreateDCFromHandle(
+                win32gui.GetDC(0)) # type: ignore
             windll.user32.PrintWindow(hWnd,dc.GetSafeHdc(),0)
             bmp=win32ui.CreateBitmap()
             bmp.CreateCompatibleBitmap(dc,w,h)

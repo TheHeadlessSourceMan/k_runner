@@ -7,7 +7,7 @@ import typing
 import os
 from pathlib import Path
 from paths import asUrl,UrlCompatible
-from .helpfiles import HelpSystemEntry
+from .helpfiles import CommandLineOption, HelpSystemEntry
 from .asCommandLine import CommandLineCompatible
 from .commandLineStringHelpers import commandlineSplit
 if typing.TYPE_CHECKING:
@@ -18,17 +18,18 @@ class CommandLineWrapper(HelpSystemEntry):
     """
     A tool to create function calls from command line apps
     """
-    def __init__(self,app:typing.Optional[CommandLineCompatible]=None):
+    def __init__(self,
+        app:typing.Optional[CommandLineCompatible]=None):
         HelpSystemEntry.__init__(self,app)
 
     @typing.overload
-    def __getitem__(self,idx:slice)->list[str]:
+    def __getitem__(self,idx:slice)->list[CommandLineOption]:
         ...
     @typing.overload
-    def __getitem__(self,idx:int)->str:
+    def __getitem__(self,idx:int)->CommandLineOption:
         ...
     def __getitem__(self,idx:typing.Union[int,slice]
-        )->typing.Union[str,list[str]]:
+        )->typing.Union[CommandLineOption,list[CommandLineOption]]:
         return self.commandLineOptions[idx]
 
     def createPythonWrapperCode(self,
@@ -345,8 +346,7 @@ class CommandLineArguments:
         if not isinstance(args,(list,tuple,CommandLine)):
             raise NotImplementedError(f'WARN: coercing type "{type(args)}" to a command line is not yet supported!') # noqa: E501 # pylint: disable=line-too-long
         for arg in args: # type: ignore
-            if arg is not None:
-                self._argv.append(arg) # type: ignore
+            self._argv.append(arg) # type: ignore
     extend=append
 
     def assign(self,args:typing.Union[CommandLineCompatible,None]=None):
