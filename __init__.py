@@ -13,6 +13,8 @@ from .osRunJob import *
 from .osRunResult import *
 from .dataRecievedCallbacks import *
 from .filterRun import *
+from .multiExecute import *
+from .processWatcher import *
 
 from .ui import *
 import k_runner.ui # pylint: disable=wrong-import-order

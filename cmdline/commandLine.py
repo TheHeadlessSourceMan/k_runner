@@ -11,7 +11,9 @@ from .helpfiles import CommandLineOption, HelpSystemEntry
 from .asCommandLine import CommandLineCompatible
 from .commandLineStringHelpers import commandlineSplit
 if typing.TYPE_CHECKING:
-    from k_runner import OsRunJob,OsRunResult
+    from k_runner import (
+        DataRecievedCallbacks,EnvironmentVariablesCompatible,
+        OsRunJob,OsRunResult)
 
 
 class CommandLineWrapper(HelpSystemEntry):
@@ -295,22 +297,72 @@ class CommandLineArguments:
         """
         del self._argv[idx]
 
-    def runAsync(self)->"OsRunJob":
+    def runAsync(self,
+        shell:bool=False,
+        detach:bool=False,
+        debug:bool=False,
+        workingDirectory:typing.Union[None,str,Path]=None,
+        environmentVariables:typing.Optional[
+            EnvironmentVariablesCompatible]=None,
+        runCallbacks:typing.Optional[DataRecievedCallbacks]=None,
+        priority:float=0.5,
+        ansiHandling:str="strip",
+        showHidden:bool=False,
+        showMinimized:bool=False,
+        showMaximized:bool=False,
+        env:typing.Optional[
+            EnvironmentVariablesCompatible]=None # alias for compatability
+        )->"OsRunJob":
         """
         Generally speaking, this is backwards and you
         should osRun(commandline) instead.
         """
         from k_runner import OsRun
-        job=OsRun(self).runAsync()
+        job=OsRun(self,
+            shell=shell,detach=detach,debug=debug,
+            workingDirectory=workingDirectory,
+            environmentVariables=environmentVariables,
+            runCallbacks=runCallbacks,
+            priority=priority,
+            ansiHandling=ansiHandling,
+            showHidden=showHidden,
+            showMinimized=showMinimized,
+            showMaximized=showMaximized,
+            env=env).runAsync()
         return job
 
-    def run(self)->"OsRunResult":
+    def run(self,
+        shell:bool=False,
+        detach:bool=False,
+        debug:bool=False,
+        workingDirectory:typing.Union[None,str,Path]=None,
+        environmentVariables:typing.Optional[
+            EnvironmentVariablesCompatible]=None,
+        runCallbacks:typing.Optional[DataRecievedCallbacks]=None,
+        priority:float=0.5,
+        ansiHandling:str="strip",
+        showHidden:bool=False,
+        showMinimized:bool=False,
+        showMaximized:bool=False,
+        env:typing.Optional[
+            EnvironmentVariablesCompatible]=None # alias for compatability
+        )->"OsRunResult":
         """
         Generally speaking, this is backwards and you
         should osRun(commandline) instead.
         """
         from k_runner import OsRun
-        result=OsRun(self).run()
+        result=OsRun(self,
+            shell=shell,detach=detach,debug=debug,
+            workingDirectory=workingDirectory,
+            environmentVariables=environmentVariables,
+            runCallbacks=runCallbacks,
+            priority=priority,
+            ansiHandling=ansiHandling,
+            showHidden=showHidden,
+            showMinimized=showMinimized,
+            showMaximized=showMaximized,
+            env=env).run()
         return result
     __call__=run
 

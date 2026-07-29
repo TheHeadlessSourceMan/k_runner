@@ -18,6 +18,8 @@ def allSystemProcesses()->typing.Generator[Process,None,None]:
     """
     for pid in psutil.pids():
         yield Process(pid)
+allProcesses=allSystemProcesses
+getAllProcesses=allSystemProcesses
 
 
 def findSystemProcesses(
@@ -54,6 +56,7 @@ def findSystemProcesses(
                 continue
         # Looks good!
         yield proc
+getProcesses=allSystemProcesses
 
 
 def getHwndsByPid(

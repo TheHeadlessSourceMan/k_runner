@@ -60,6 +60,12 @@ class EnvironmentVariables:
         """
         return len(self._env)
 
+    def copy(self)->'EnvironmentVariables':
+        """
+        Create a copy of this environment variables object.
+        """
+        return EnvironmentVariables(self)
+
     def items(self)->typing.Iterator[typing.Tuple[str,str]]:
         """
         Access like a dict
