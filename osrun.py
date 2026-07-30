@@ -405,8 +405,16 @@ def osrun(
     detach:bool=False,
     debug:bool=False,
     workingDirectory:typing.Union[None,str,Path]=None,
-    env:typing.Optional[EnvironmentVariablesCompatible]=None,
-    runCallbacks:typing.Optional[DataRecievedCallbacks]=None
+    environmentVariables:typing.Optional[
+        EnvironmentVariablesCompatible]=None,
+    runCallbacks:typing.Optional[DataRecievedCallbacks]=None,
+    priority:float=MEDIUM_PRIORITY,
+    ansiHandling:str="strip",
+    showHidden:bool=False,
+    showMinimized:bool=False,
+    showMaximized:bool=False,
+    env:typing.Optional[
+        EnvironmentVariablesCompatible]=None # alias for compatability
     )->OsRunResult:
     """ shortcut for OsRun().run(...) """
     return OsRun(cmd,
@@ -414,8 +422,15 @@ def osrun(
         detach,
         debug,
         workingDirectory,
-        env,
-        runCallbacks).run()
+        environmentVariables,
+        runCallbacks,
+        priority,
+        ansiHandling,
+        showHidden,
+        showMinimized,
+        showMaximized,
+        env).run()
+osRun=osrun
 run=osrun
 
 

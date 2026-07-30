@@ -1,11 +1,12 @@
 import threading
 import time
 import typing
-from k_runner import (
-    CommandLineCompatible,OsRunJob,Process,asCommandLine,getAllProcesses)
+if typing.TYPE_CHECKING:
+    from k_runner import (
+        CommandLineCompatible,OsRunJob,Process,asCommandLine,getAllProcesses)
 
 
-ProcessWatcherCallback=typing.Callable[['ProcessWatcher',Process],None]
+ProcessWatcherCallback=typing.Callable[['ProcessWatcher','Process'],None]
 
 
 class ProcessWatcher:
@@ -53,7 +54,7 @@ class ProcessWatcher:
                 self.onProcessStopped(self,self._exclusiveInstance)
             self._exclusiveInstance=None
 
-    def startExclusiveInstance(self)->typing.Optional[OsRunJob]:
+    def startExclusiveInstance(self)->typing.Optional['OsRunJob']:
         """
         Start a new exclusive instance if not already running.
         """
@@ -63,7 +64,7 @@ class ProcessWatcher:
                 self.onProcessStarted(self,self._exclusiveInstance)
         return self._exclusiveInstance
 
-    def restartExclusiveInstance(self)->typing.Optional[OsRunJob]:
+    def restartExclusiveInstance(self)->typing.Optional['OsRunJob']:
         """
         Restart the exclusive instance.
         """
@@ -80,7 +81,7 @@ class ProcessWatcher:
 
     def checkNow(self,
         processList:typing.Optional[
-            typing.Iterable[Process]]=None
+            typing.Iterable['Process']]=None
         )->None:
         """
         Check the status of the process.

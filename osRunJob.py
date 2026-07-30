@@ -19,7 +19,7 @@ from .processes import Process,MEDIUM_PRIORITY
 from .cmdline import CommandLine
 from .settings import useDaemonThreads
 if typing.TYPE_CHECKING:
-    from osrun import OsRun
+    from .osrun import OsRun
 
 
 class OsRunJob(RecieveDataManager,Process):
@@ -161,7 +161,7 @@ class OsRunJob(RecieveDataManager,Process):
                 #     start "" /AboveNormal "C:\Windows\System32\mspaint.exe"
                 # see also:
                 # https://www.tenforums.com/tutorials/89548-set-cpu-process-priority-applications-windows-10-a.html
-                from processes.priority import getPriorityName
+                from .processes.priority import getPriorityName
                 cmdPath=Path(cmd[0]).absolute()
                 if not cmdPath.is_file():
                     cmdPath=Path(cmd[0])
@@ -225,7 +225,10 @@ class OsRunJob(RecieveDataManager,Process):
                 if not self.chunkyIO:
                     data=ioObject.read1(1)
                     if len(data)<1:
-                        break
+                        time.sleep(0.010)
+                        data=ioObject.read1(1)
+                        if len(data)<1:
+                            break
                     self.addBytes(whichStream,data)
                 else:
                     data=ioObject.read(80)

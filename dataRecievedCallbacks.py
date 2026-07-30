@@ -293,7 +293,7 @@ class RecieveDataManager(DataRecievedCallbacks):
         self._stdouterrCurrentLineChars:typing.Tuple[
             typing.List[str],typing.List[str]]=\
             ([],[])
-        self._notifyQueue=Queue[StringNotify]()
+        self._notifyQueue=Queue[typing.Tuple[int,bytes]]()
 
     def getBytes(self,
         whichStream:int=2
@@ -308,8 +308,9 @@ class RecieveDataManager(DataRecievedCallbacks):
         q=Queue[int]()
         for b in self._byteBuffers[whichStream]:
             q.put(b)
-        def cb(value:int):
-            q.put(value)
+        def cb(value:bytes)->None:
+            for v in value:
+                q.put(v)
         self.addBytesNotify(whichStream,cb)
         self._pauseNotifications=False
         while self._notifyThread is not None: # type: ignore
