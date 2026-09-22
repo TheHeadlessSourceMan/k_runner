@@ -41,7 +41,7 @@ def asUiComponent(comp:UIComponentCompatible)->"UiComponent":
         else:
             from .find import pidToHwnd
             comp=typing.cast("ProcessCompatible",comp)
-            comp=UiComponent(pidToHwnd(comp))
+            comp=UiComponent(pidToHwnd(comp)) # type: ignore
     return comp
 asComponent=asUiComponent
 asUiControl=asUiComponent

@@ -594,8 +594,10 @@ class UiComponent(UiComponentGroup):
         """
         def clean(
             s:str,
-            removeAllBefore:typing.Optional[str]=None,
-            removeAllAfter:typing.Optional[typing.Union[str,typing.Tuple[str,...]]]=('SAMPLE:','-')
+            removeAllBefore:typing.Union[
+                None,str,typing.Iterable[str]]=None,
+            removeAllAfter:typing.Union[
+                None,str,typing.Iterable[str]]=('SAMPLE:','-')
             )->str:
             """ """
             if removeAllAfter is not None:

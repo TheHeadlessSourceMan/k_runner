@@ -22,14 +22,14 @@ class _DesktopManager:
     """
     Manage virtual desktops
     """
-    _hwndsta:PyHWINSTA=GetProcessWindowStation()
+    _hwndsta:"PyHWINSTA"=GetProcessWindowStation()
 
     @property
     def desktopNames(self)->typing.Iterable[str]:
         """
         List all of the desktop names
         """
-        return self._hwndsta.EnumDesktops()
+        return self._hwndsta.EnumDesktops() # type: ignore
 
     def create(self,
         desktopName:str,
@@ -63,7 +63,7 @@ class _DesktopManager:
         return self
 
     def __del__(self):
-        self._hwndsta.Detach()
+        self._hwndsta.Detach() # type: ignore
 
 DesktopManager=_DesktopManager()
 desktopManager=DesktopManager
@@ -86,15 +86,15 @@ class UiDesktop:
         createIfMissing:bool=True,
         deleteCreatedOnExit:bool=True):
         """ """
-        self._pyHDesk:typing.Optional[PyHDESK]=None
+        self._pyHDesk:typing.Optional["PyHDESK"]=None
         self.deleteOnExit:bool=False
         if alwaysCreateNew:
-            self._pyHDesk=CreateDesktop(desktopName)
+            self._pyHDesk=CreateDesktop(desktopName) # type: ignore
             self.deleteOnExit=deleteCreatedOnExit
         else:
-            self._pyHDesk=OpenDesktop(desktopName)
-            if not self._pyHDesk and createIfMissing:
-                self._pyHDesk=CreateDesktop(desktopName)
+            self._pyHDesk=OpenDesktop(desktopName) # type: ignore
+            if not self._pyHDesk and createIfMissing: # type: ignore
+                self._pyHDesk=CreateDesktop(desktopName) # type: ignore
                 self.deleteOnExit=deleteCreatedOnExit
         self.desktopName:str=desktopName
 
@@ -103,9 +103,9 @@ class UiDesktop:
         """
         Handle to the desktop
         """
-        if self._pyHDesk is None:
+        if self._pyHDesk is None: # type: ignore
             return 0
-        return self._pyHDesk.handle
+        return self._pyHDesk.handle # type: ignore
 
     @property
     def hWnd(self)->int:
@@ -125,9 +125,9 @@ class UiDesktop:
         """
         Make this the currently-selected desktop
         """
-        if self._pyHDesk is None:
+        if self._pyHDesk is None: # type: ignore
             raise IndexError("Desktop switching not available")
-        self._pyHDesk.SwitchDesktop(self.hDesktop)
+        self._pyHDesk.SwitchDesktop(self.hDesktop) # type: ignore
 
     @property
     def hwnd(self):
@@ -142,11 +142,11 @@ class UiDesktop:
         (will be closed when object goes out of scope as well,
         so you can simply do myDesktopVariable=None instead)
         """
-        if self._pyHDesk is not None:
+        if self._pyHDesk is not None: # type: ignore
             if self.deleteOnExit:
-                self._pyHDesk.CloseDesktop()
+                self._pyHDesk.CloseDesktop() # type: ignore
             else:
-                self._pyHDesk.Detach()
+                self._pyHDesk.Detach() # type: ignore
             self._pyHDesk=None
 
     def __del__(self):
@@ -161,11 +161,11 @@ class UiDesktop:
         """
         wndDc=GetWindowDC(self.hwnd)
         memDc=CreateCompatibleDC(wndDc)
-        rect=GetWindowRect(self.hwnd)
-        memBmp=CreateCompatibleBitmap(wndDc, rect.Width(),rect.Height())
-        oldBmp=SelectObject(memDc,memBmp)
+        rect=GetWindowRect(self.hwnd) # type: ignore
+        memBmp=CreateCompatibleBitmap(wndDc,rect.Width(),rect.Height()) # type: ignore # noqa: E501
+        oldBmp=SelectObject(memDc,memBmp) # type: ignore
         # print(window to the memory DC.)
-        BringWindowToTop(self.hwnd,memDc,0)
+        BringWindowToTop(self.hwnd,memDc,0) # type: ignore
         # Here you can use memDc of the window
         # (e.g. BitBlt it to the DC of the merged desktop screen)
         DeleteObject(memBmp)

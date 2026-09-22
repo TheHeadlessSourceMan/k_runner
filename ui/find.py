@@ -79,15 +79,15 @@ def findWindows(
             bounds=win32gui.GetWindowPlacement(hWnd)
             if location[0]<bounds[0]:
                 continue
-            if location[0]>bounds[0]+bounds[2]:
+            if location[0]>bounds[0]+bounds[2]: # type: ignore
                 continue
             if location[1]<bounds[1]:
                 continue
-            if location[1]>bounds[1]+bounds[3]:
+            if location[1]>bounds[1]+bounds[3]: # type: ignore
                 continue
         if title is not None:
             #txt=win32gui.GetWindowText(hWnd).strip()
-            txt=str(win32gui.GetWindowTitle(hWnd)).strip()
+            txt=str(win32gui.GetWindowTitle(hWnd)).strip() # type: ignore
             if isinstance(title,str):
                 if txt.lower().find(title)<0:
                     continue
