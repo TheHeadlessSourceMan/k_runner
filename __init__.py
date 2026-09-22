@@ -20,7 +20,7 @@ from .processWatcher import *
 if os.name == "nt":
     from ._kRunnerToolsWindows import *
 else:
-    from ._kRunnerToolsUnix import *
+    from ._kRunnerToolsLinux import *
 
 from .ui import *
 import k_runner.ui # pylint: disable=wrong-import-order # type: ignore
