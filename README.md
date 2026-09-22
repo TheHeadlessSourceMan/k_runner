@@ -3,6 +3,8 @@ More seamlessly run system programs with python.
 
 (Lightyears beyond Popen!)
 
+NOTE: THIS IS EXPERIMENTAL AND IS SUBJECT TO CHANGE
+
 Features:
 * wrap system program and then call it like a function
 * load/save this configuration to json
