@@ -7,4 +7,4 @@ Settings for how k_runner works
 #
 # According to rumor, enabling daemon threads allows the
 # program to exit while child threads are still running.
-useDaemonThreads=False
+useDaemonThreads=True
