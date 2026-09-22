@@ -14,6 +14,9 @@ dependencies = [
 	"pywin32; sys_platform == 'win32'",
 ]
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [tool.hatch.build.targets.wheel.force-include]
 "LICENSE" = "k_runner/LICENSE"
 "__init__.py" = "k_runner/__init__.py"
