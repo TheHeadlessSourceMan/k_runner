@@ -6,8 +6,16 @@ build-backend = "hatchling.build"
 name = "k_runner"
 version = "1.0"
 description = "This module is for smartly running system commands and processing their io streams."
+license = {file = "LICENSE"}
+dependencies = [
+	"lxml",
+	"paths",
+	"psutil",
+	"pywin32; sys_platform == 'win32'",
+]
 
 [tool.hatch.build.targets.wheel.force-include]
+"LICENSE" = "k_runner/LICENSE"
 "__init__.py" = "k_runner/__init__.py"
 "_kRunnerToolsLinux.py" = "k_runner/_kRunnerToolsLinux.py"
 "_kRunnerToolsWindows.py" = "k_runner/_kRunnerToolsWindows.py"
