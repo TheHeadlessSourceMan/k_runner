@@ -91,7 +91,8 @@ class Process:
         self.num_ctx_switches=self._psutilProcess.num_ctx_switches
         if hasattr(self._psutilProcess,'num_fds'):
             self.num_fds=self._psutilProcess.num_fds # type: ignore
-        self.num_handles=self._psutilProcess.num_handles
+        if hasattr(self._psutilProcess,'num_handles'):
+            self.num_handles=self._psutilProcess.num_handles # type: ignore
         self.num_threads=self._psutilProcess.num_threads
         self.oneshot=self._psutilProcess.oneshot
         self.open_files=self._psutilProcess.open_files
