@@ -303,7 +303,7 @@ class CommandLineArguments:
         debug:bool=False,
         workingDirectory:typing.Union[None,str,Path]=None,
         environmentVariables:typing.Optional[
-            EnvironmentVariablesCompatible]=None,
+            "EnvironmentVariablesCompatible"]=None,
         runCallbacks:typing.Optional[DataRecievedCallbacks]=None,
         priority:float=0.5,
         ansiHandling:str="strip",
