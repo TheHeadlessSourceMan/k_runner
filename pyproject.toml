@@ -9,7 +9,7 @@ description = "This module is for smartly running system commands and processing
 license = {file = "LICENSE"}
 dependencies = [
 	"lxml",
-	"paths",
+	"paths @ git+https://github.com/TheHeadlessSourceMan/paths.git",
 	"psutil",
 	"pywin32; sys_platform == 'win32'",
 ]
