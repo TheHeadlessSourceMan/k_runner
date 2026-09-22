@@ -303,15 +303,15 @@ class CommandLineArguments:
         debug:bool=False,
         workingDirectory:typing.Union[None,str,Path]=None,
         environmentVariables:typing.Optional[
-            EnvironmentVariablesCompatible]=None,
-        runCallbacks:typing.Optional[DataRecievedCallbacks]=None,
+            "EnvironmentVariablesCompatible"]=None,
+        runCallbacks:typing.Optional["DataRecievedCallbacks"]=None,
         priority:float=0.5,
         ansiHandling:str="strip",
         showHidden:bool=False,
         showMinimized:bool=False,
         showMaximized:bool=False,
         env:typing.Optional[
-            EnvironmentVariablesCompatible]=None # alias for compatability
+            "EnvironmentVariablesCompatible"]=None # alias for compatability
         )->"OsRunJob":
         """
         Generally speaking, this is backwards and you
@@ -337,15 +337,15 @@ class CommandLineArguments:
         debug:bool=False,
         workingDirectory:typing.Union[None,str,Path]=None,
         environmentVariables:typing.Optional[
-            EnvironmentVariablesCompatible]=None,
-        runCallbacks:typing.Optional[DataRecievedCallbacks]=None,
+            "EnvironmentVariablesCompatible"]=None,
+        runCallbacks:typing.Optional["DataRecievedCallbacks"]=None,
         priority:float=0.5,
         ansiHandling:str="strip",
         showHidden:bool=False,
         showMinimized:bool=False,
         showMaximized:bool=False,
         env:typing.Optional[
-            EnvironmentVariablesCompatible]=None # alias for compatability
+            "EnvironmentVariablesCompatible"]=None # alias for compatability
         )->"OsRunResult":
         """
         Generally speaking, this is backwards and you
