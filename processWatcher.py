@@ -2,8 +2,9 @@ import threading
 import time
 import typing
 if typing.TYPE_CHECKING:
-    from k_runner import (
-        CommandLineCompatible,OsRunJob,Process,asCommandLine,getAllProcesses)
+    from .cmdline import CommandLineCompatible
+    from .processes import Process
+    from .osRunJob import OsRunJob
 
 
 ProcessWatcherCallback=typing.Callable[['ProcessWatcher','Process'],None]
@@ -11,7 +12,7 @@ ProcessWatcherCallback=typing.Callable[['ProcessWatcher','Process'],None]
 
 class ProcessWatcher:
     def __init__(self,
-        commandLine:CommandLineCompatible,
+        commandLine:"CommandLineCompatible",
         startExclusive:bool=False,
         minRequired:int=0,
         maxAllowed:typing.Optional[int]=None,
@@ -30,13 +31,15 @@ class ProcessWatcher:
         :onProcessStarted: Callback when the process starts.
         :onProcessStopped: Callback when the process stops.
         """
+        from .cmdline import asCommandLine
         self.commandLine=asCommandLine(commandLine)
         self.minRequired=minRequired
         self.maxAllowed=maxAllowed
         self.onProcessStarted=onProcessStarted
         self.onProcessStopped=onProcessStopped
-        self._currentProcesses:typing.List[Process]=[]
-        self._exclusiveInstance:typing.Optional[OsRunJob]=None
+        self._currentProcesses:typing.List[
+            typing.Union["OsRunJob","Process"]]=[]
+        self._exclusiveInstance:typing.Optional["OsRunJob"]=None
         if startExclusive:
             self._exclusiveInstance=self.startExclusiveInstance()
         self.checkNow()
@@ -59,7 +62,8 @@ class ProcessWatcher:
         Start a new exclusive instance if not already running.
         """
         if self._exclusiveInstance is None:
-            self._exclusiveInstance=self.commandLine.runAsync()
+            self._exclusiveInstance=typing.cast(
+                "OsRunJob",self.commandLine.runAsync())
             if self.onProcessStarted:
                 self.onProcessStarted(self,self._exclusiveInstance)
         return self._exclusiveInstance
@@ -87,13 +91,14 @@ class ProcessWatcher:
         Check the status of the process.
         """
         if processList is None:
+            from .processes import getAllProcesses
             processList=getAllProcesses()
-        validProcesses:typing.List[Process]=[]
+        validProcesses:typing.List["Process"]=[]
         for p in processList:
-            if p.commandLine==self.commandLine:
+            if p.commandLine==self.commandLine: # type: ignore
                 validProcesses.append(p)
         # find added processes (do not add to list yet for efficiency)
-        addedProcesses:typing.List[Process]=[]
+        addedProcesses:typing.List["Process"]=[]
         for p in validProcesses:
             if p not in self._currentProcesses:
                 addedProcesses.append(p)
@@ -111,9 +116,9 @@ class ProcessWatcher:
         # start anything that needs starting
         while len(self._currentProcesses)<self.minRequired:
             job=self.commandLine.runAsync()
-            self._currentProcesses.append(job)
-            if self.onProcessStarted:
-                self.onProcessStarted(self,job)
+            self._currentProcesses.append(job) # type: ignore
+            if self.onProcessStarted is not None:
+                self.onProcessStarted(self,job) # type: ignore
         # stop anything that needs stopping
         if self.maxAllowed is not None:
             while len(self._currentProcesses)>self.maxAllowed:
@@ -161,6 +166,7 @@ class ProcessWatchers:
         status of all registered process watchers.
         """
         # main loop
+        from .processes import getAllProcesses
         while self._keepgoing:
             processList=list(getAllProcesses())
             for watcher in self._watchers:
@@ -258,9 +264,9 @@ def cmdline(args:typing.List[str])->int:
         print("No command line specified")
         printHelp=True
     else:
-        def onProcessStarted(w:ProcessWatcher,process:Process):
+        def onProcessStarted(w:ProcessWatcher,process:"Process"):
             print(f"Process started: {process}")
-        def onProcessStopped(w:ProcessWatcher,process:Process):
+        def onProcessStopped(w:ProcessWatcher,process:"Process"):
             print(f"Process stopped: {process}")
         pw=ProcessWatchers(pollingInterval)
         w=ProcessWatcher(cmdline,
