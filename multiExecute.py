@@ -4,7 +4,7 @@ Module for executing commands on multiple files concurrently using threads.
 import typing
 from threading import Thread
 from queue import Queue
-from paths import Path,Url,UrlCompatible,UrlListCompatible
+from paths import PathLike as Path, Url, UrlCompatible, UrlListCompatible
 from k_runner import (
     MEDIUM_PRIORITY,CommandLine,CommandLineCompatible,
     DataRecievedCallbacks,EnvironmentVariables,EnvironmentVariablesCompatible,
@@ -225,7 +225,7 @@ class MultiExecuteOnFiles(MultiExecute[Url,UrlCompatible]):
         ):
         """
         """
-        MultiExecute[Url,UrlCompatible].__init__(self,
+        super().__init__(
             commandLine=commandLine,
             things=files,
             allowDuplicates=allowDuplicates,
