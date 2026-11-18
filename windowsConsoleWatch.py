@@ -143,20 +143,46 @@ class ConsoleWatcher:
     """
 
     def __init__(self,
-        target:typing.Union[int,typing.Sequence[str]],
+        target:typing.Union[int,typing.Union[str,typing.Iterable[str]]],
         pollingInterval:float=DEFAULT_INTERVAL):
         """
         :param target: pid of a running process, or a command line to launch
             in a new console
         :param pollingInterval: seconds between console polls
         """
+        if isinstance(target,str):
+            target=[target]
+        elif isinstance(target,int):
+            pass
+        else:
+            target=list(target)
         self.target=target
         self.pollingInterval=pollingInterval
         self._matchLineHandlers:typing.List[typing.Tuple[
             typing.Pattern[str],ConsoleOutputCallback]]=[]
         self._allLineHandlers:typing.List[ConsoleOutputCallback]=[]
-        self.targetProcess:typing.Optional[subprocess.Popen[bytes]]=None
+        self.targetProcess:typing.Optional[subprocess.Popen[str]]=None
         self._helperProcess:typing.Optional[subprocess.Popen[str]]=None
+
+    def poll(self)->typing.Optional[int]:
+        """
+        Poll the target process for its exit code.
+
+        :return: exit code if the process has terminated, None otherwise
+        """
+        if self.targetProcess is None:
+            return None
+        return self.targetProcess.poll()
+
+    def wait(self)->typing.Optional[int]:
+        """
+        Wait for the target process to terminate and return its exit code.
+
+        :return: exit code of the target process, or None if not started
+        """
+        if self.targetProcess is None:
+            return None
+        return self.targetProcess.wait()
 
     def register(self,
         callback:ConsoleOutputCallback,
@@ -201,8 +227,10 @@ class ConsoleWatcher:
         if isinstance(self.target,int):
             pid=self.target
         else:
-            self.targetProcess=subprocess.Popen(
-                list(self.target),creationflags=CREATE_NEW_CONSOLE)
+            self.targetProcess=subprocess.Popen(self.target,
+                creationflags=CREATE_NEW_CONSOLE,
+                stdout=subprocess.PIPE,stderr=subprocess.STDOUT,
+                encoding="utf-8",errors="replace")
             pid=self.targetProcess.pid
         cmd=[
             sys.executable,os.path.abspath(__file__),
