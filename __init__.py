@@ -17,8 +17,9 @@ from .filterRun import *
 from .multiExecute import *
 from .processWatcher import *
 
-if os.name == "nt":
+if os.name=="nt":
     from ._kRunnerToolsWindows import *
+    from .windowsConsoleWatch import *
 else:
     from ._kRunnerToolsLinux import *
 
