@@ -15,6 +15,7 @@ import os
 import re
 import subprocess
 import sys
+import threading
 import time
 import typing
 from ctypes import wintypes
@@ -91,6 +92,9 @@ def readConsole(pid:int,interval:float=DEFAULT_INTERVAL)->int:
     """
     k=_kernel32()
     proc=k.OpenProcess(SYNCHRONIZE,False,pid)
+    # a venv launcher can give this process its own console,
+    # which blocks AttachConsole
+    k.FreeConsole()
     if not k.AttachConsole(pid):
         print(f'AttachConsole({pid}) failed, error {ctypes.get_last_error()}',
             file=sys.stderr)
@@ -161,6 +165,9 @@ class ConsoleWatcher:
         self._matchLineHandlers:typing.List[typing.Tuple[
             typing.Pattern[str],ConsoleOutputCallback]]=[]
         self._allLineHandlers:typing.List[ConsoleOutputCallback]=[]
+        self._stdoutLineHandlers:typing.List[typing.Callable[[str],None]]=[]
+        self._handlerLock=threading.Lock()
+        self._pumpThreads:typing.List[threading.Thread]=[]
         self.targetProcess:typing.Optional[subprocess.Popen[str]]=None
         self._helperProcess:typing.Optional[subprocess.Popen[str]]=None
 
@@ -180,9 +187,18 @@ class ConsoleWatcher:
 
         :return: exit code of the target process, or None if not started
         """
-        if self.targetProcess is None:
-            return None
-        return self.targetProcess.wait()
+        code=None
+        if self.targetProcess is not None:
+            code=self.targetProcess.wait()
+        self.join()
+        return code
+
+    def join(self)->None:
+        """
+        Wait until all output from the target has been dispatched
+        """
+        for thread in self._pumpThreads:
+            thread.join()
 
     def register(self,
         callback:ConsoleOutputCallback,
@@ -194,29 +210,56 @@ class ConsoleWatcher:
         if pattern is None:
             self._allLineHandlers.append(callback)
             return
-        self._allLineHandlers.append(callback)
         if isinstance(pattern,str):
             pattern=re.compile(pattern)
         self._matchLineHandlers.append((pattern,callback))
     add=register
     append=register
 
+    def registerStdout(self,callback:typing.Callable[[str],None])->None:
+        """
+        Call callback(line) for every line the launched target writes to its
+        redirected stdout/stderr (as opposed to its console screen buffer).
+        Only applies when the target is launched by this watcher.
+        Registering one redirects the target's stdout to a pipe, which
+        can leave its console window empty; register before start().
+        """
+        self._stdoutLineHandlers.append(callback)
+
     def _handleLine(self,line:str)->None:
         """
         Send one line to every interested callback
         """
-        for lineHandler in self._allLineHandlers:
-            if lineHandler.__code__.co_argcount==2:
-                lineHandler(line,None) # type: ignore
-            else:
-                lineHandler(line) # type: ignore
-        for pattern,callback in self._matchLineHandlers:
-            match=pattern.search(line)
-            if match:
-                if callback.__code__.co_argcount==1:
-                    callback(line) # type: ignore
+        with self._handlerLock:
+            for lineHandler in self._allLineHandlers:
+                if lineHandler.__code__.co_argcount==2:
+                    lineHandler(line,None) # type: ignore
                 else:
-                    callback(line,match) # type: ignore
+                    lineHandler(line) # type: ignore
+            for pattern,callback in self._matchLineHandlers:
+                match=pattern.search(line)
+                if match:
+                    if callback.__code__.co_argcount==1:
+                        callback(line) # type: ignore
+                    else:
+                        callback(line,match) # type: ignore
+
+    def _pump(self,
+        stream:typing.IO[str],
+        handler:typing.Callable[[str],None])->None:
+        """
+        Thread body: feed each line from stream to handler until EOF
+        """
+        for raw in stream:
+            handler(raw.rstrip('\r\n'))
+
+    def _handleStdoutLine(self,line:str)->None:
+        """
+        Send one target stdout line to the stdout callbacks
+        """
+        with self._handlerLock:
+            for callback in self._stdoutLineHandlers:
+                callback(line)
 
     def start(self)->int:
         """
@@ -227,30 +270,42 @@ class ConsoleWatcher:
         if isinstance(self.target,int):
             pid=self.target
         else:
+            capture=bool(self._stdoutLineHandlers)
             self.targetProcess=subprocess.Popen(self.target,
                 creationflags=CREATE_NEW_CONSOLE,
-                stdout=subprocess.PIPE,stderr=subprocess.STDOUT,
+                stdout=subprocess.PIPE if capture else None,
+                stderr=subprocess.STDOUT if capture else None,
                 encoding="utf-8",errors="replace")
             pid=self.targetProcess.pid
         cmd=[
-            sys.executable,os.path.abspath(__file__),
+            sys.executable,
+            os.path.abspath(__file__),
             f'--reader={pid}',
-            f'--interval={self.pollingInterval}']
+            f'--interval={self.pollingInterval}',
+            '--all']
         self._helperProcess=subprocess.Popen(
             cmd,stdout=subprocess.PIPE,stdin=subprocess.DEVNULL,
             creationflags=DETACHED_PROCESS,encoding="utf-8",errors="replace")
+        streams:typing.List[typing.Tuple[
+            typing.Optional[typing.IO[str]],typing.Callable[[str],None]]]=[
+            (self._helperProcess.stdout,self._handleLine),
+            (self.targetProcess.stdout if self.targetProcess else None,
+                self._handleStdoutLine)]
+        for stream,handler in streams:
+            if stream is not None:
+                thread=threading.Thread(
+                    target=self._pump,args=(stream,handler),daemon=True)
+                thread.start()
+                self._pumpThreads.append(thread)
         return pid
 
     def run(self)->None:
         """
-        Dispatch console lines until the watched process exits or Ctrl-C
+        Dispatch output until the watched process exits or Ctrl-C
         """
         self.start()
-        if self._helperProcess is None or self._helperProcess.stdout is None:
-            return
         try:
-            for raw in self._helperProcess.stdout:
-                self._handleLine(raw.rstrip('\n'))
+            self.join()
         except KeyboardInterrupt:
             pass
         finally:
