@@ -113,7 +113,8 @@ hwndToPid=getPidByHwnd
 
 
 def findProcesses(
-    programName:typing.Union[None,str,typing.Pattern[str]]=None
+    programName:typing.Union[None,str,typing.Pattern[str]]=None,
+    showWarnings:bool=True
     )->typing.Generator[Process,None,None]:
     """
     search for running processes that match the given parameters
@@ -127,7 +128,14 @@ def findProcesses(
             yield Process(pid)
     elif isinstance(programName,str):
         for pid in win32process.EnumProcesses():
-            p=Process(pid)
+            try:
+                p=Process(pid)
+            except Exception as e:
+                # if anything weird happens (eg, process no longer exists)
+                # then skip this pid
+                if showWarnings:
+                    print(f"Skipping process {pid} due to error: {e}")
+                continue
             if p.name.endswith(programName):
                 yield p
     else:
