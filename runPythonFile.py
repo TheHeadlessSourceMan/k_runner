@@ -10,12 +10,15 @@ import typing
 import os
 
 
+StreamOutputCallback=typing.Callable[[str],None]
+
+
 class ErrIO:
     """
     Simply a write pass-though file-like object
     It also watches to see if any non-whitespace bytes have been written
     """
-    def __init__(self,mirrorToFile:typing.IO):
+    def __init__(self,mirrorToFile:typing.TextIO):
         self.mirrorToFile=mirrorToFile
         self.hasWritten=False
 
@@ -31,8 +34,8 @@ class ErrIO:
 def runPythonFile(
     script:typing.Union[str,typing.Iterable[str]],
     args:typing.Optional[typing.Iterable[str]]=None,
-    onOutputCB:typing.Optional[typing.Callable]=None,
-    onErrorCB:typing.Optional[typing.Callable]=None,
+    onOutputCB:typing.Optional[StreamOutputCallback]=None,
+    onErrorCB:typing.Optional[StreamOutputCallback]=None,
     shell:bool=False
     )->typing.Tuple[bool,str,int]:
     """

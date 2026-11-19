@@ -332,7 +332,8 @@ class OsRun(DataRecievedCallbacks):
 
         NOTE: if RunJob is garbage collected, the job itself will terminate
         """
-        job=OsRunJob(self,runCallbacks=self)
+        job=OsRunJob(self, # type: ignore
+            runCallbacks=self)
         job.chunkyIO=self.chunkyIO
         job.extendCallbacks(runCallbacks)
         job.start(moreParams,workingDirectory,moreEnvironmentVariables)
@@ -354,7 +355,7 @@ class OsRun(DataRecievedCallbacks):
             for line in OsRun("ps -A"):
                 ...
         """
-        job=OsRunJob(self)
+        job=OsRunJob(self) # type: ignore
         job.start(moreParams,workingDirectory)
         yield from job.lines
 
@@ -371,7 +372,7 @@ class OsRun(DataRecievedCallbacks):
 
         NOTE: runIterAllOutput() gets both stdout and stderr mixed
         """
-        job=OsRunJob(self)
+        job=OsRunJob(self) # type: ignore
         job.start(moreParams,workingDirectory)
         yield from job.stdoutLines
 
@@ -388,7 +389,7 @@ class OsRun(DataRecievedCallbacks):
 
         NOTE: runIterAllOutput() gets both stdout and stderr mixed
         """
-        job=OsRunJob(self)
+        job=OsRunJob(self) # type: ignore
         job.start(moreParams,workingDirectory)
         yield from job.stderrLines
 

@@ -174,7 +174,7 @@ class OsRunJob(RecieveDataManager,Process):
             else:
                 self.priority=self.osRun.priority
         if os.name=='nt':
-            from win32con import SW_MINIMIZE,SW_MAXIMIZE,SW_HIDE
+            from win32con import SW_MINIMIZE,SW_MAXIMIZE,SW_HIDE # pylint: disable=import-error # noqa: E501
             startupinfo=subprocess.STARTUPINFO()
             startupinfo.dwFlags=subprocess.STARTF_USESHOWWINDOW
             if self.osRun.showMinimized:

@@ -1,3 +1,8 @@
+"""
+Watches and manages processes based on a specified command line.
+Can start and stop exclusive instances and
+track the number of running instances.
+"""
 import threading
 import time
 import typing
@@ -11,6 +16,11 @@ ProcessWatcherCallback=typing.Callable[['ProcessWatcher','Process'],None]
 
 
 class ProcessWatcher:
+    """
+    Watches and manages processes based on a specified command line.
+    Can start and stop exclusive instances and
+    track the number of running instances.
+    """
     def __init__(self,
         commandLine:"CommandLineCompatible",
         startExclusive:bool=False,
@@ -77,10 +87,16 @@ class ProcessWatcher:
 
     @property
     def numInstances(self)->int:
+        """
+        Returns the number of currently running instances.
+        """
         return len(self._currentProcesses)
 
     @property
     def isRunning(self)->bool:
+        """
+        Returns True if there are any currently running instances.
+        """
         return len(self._currentProcesses)>0
 
     def checkNow(self,
@@ -265,8 +281,10 @@ def cmdline(args:typing.List[str])->int:
         printHelp=True
     else:
         def onProcessStarted(w:ProcessWatcher,process:"Process"):
+            _=w
             print(f"Process started: {process}")
         def onProcessStopped(w:ProcessWatcher,process:"Process"):
+            _=w
             print(f"Process stopped: {process}")
         pw=ProcessWatchers(pollingInterval)
         w=ProcessWatcher(cmdline,

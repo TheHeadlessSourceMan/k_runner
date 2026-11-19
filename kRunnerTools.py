@@ -26,8 +26,8 @@ def run(
     callbacks:typing.Optional[ApplicationCallbacks]=None,
     hideWindows:bool=False,
     priorityBoost:int=0,
-    wDogOutput=None,
-    wDogLifetime=None,
+    wDogOutput:typing.Optional[str]=None,
+    wDogLifetime:typing.Optional[int]=None,
     shell:bool=False
     )->int:
     """
@@ -38,7 +38,7 @@ def run(
         priorityBoost,wDogOutput,wDogLifetime)
 
 # -------------- Main entry point
-def cmdline(args:typing.Iterable[str]):
+def cmdline(args:typing.Iterable[str])->int:
     """
     Run the command line
 
@@ -49,8 +49,8 @@ def cmdline(args:typing.Iterable[str]):
     print((Application(None).getShell()))
     _=args
     #run(args,hideWindows=True,wDogLifetime=10)
-
+    return 0
 
 if __name__=='__main__':
     import sys
-    cmdline(sys.argv[1:])
+    sys.exit(cmdline(sys.argv[1:]))

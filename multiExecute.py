@@ -68,7 +68,9 @@ class MultiExecute(typing.Generic[ThingType,ThingCompatibleType]):
         self.shell=shell
         self.detach=detach
         self.debug=debug
-        self.workingDirectory=workingDirectory
+        if isinstance(workingDirectory,str):
+            workingDirectory=Path(workingDirectory)
+        self.workingDirectory:typing.Optional[Path]=workingDirectory
         if environmentVariables is None:
             environmentVariables={}
         self.environmentVariables=asEnvironmentVariables(environmentVariables)

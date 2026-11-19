@@ -8,7 +8,6 @@ Then, only if there is an error code,
 it brings up a window with the program output.
 """
 import typing
-from collections.abc import Iterable
 import os
 from tkinter import Tk,Frame,Text,Scrollbar
 from k_runner.runPythonFile import runPythonFile
@@ -33,7 +32,7 @@ class ErrorWindow(Frame):
             #master.attributes('-fullscreen',True)
             #master.attributes('-zoomed',True)
             if icon is not None:
-                master.iconbitmap(default=icon)
+                master.iconbitmap(default=icon) # type: ignore
         Frame.__init__(self,master,bg='red')
         self.grid_propagate(False)
         self.pack(fill='both',expand=1)
@@ -42,10 +41,10 @@ class ErrorWindow(Frame):
         self.textControl=Text(self,wrap="none",bg="#dddddd")
         self.textControl.grid(row=0,column=0,sticky="nsew",padx=2,pady=2)
         xScrollbar=Scrollbar(self,
-            orient='horizontal',command=self.textControl.xview)
+            orient='horizontal',command=self.textControl.xview) # type: ignore
         xScrollbar.grid(row=1,column=0,sticky="ew")
         yScrollbar=Scrollbar(self,
-            orient='vertical',command=self.textControl.yview)
+            orient='vertical',command=self.textControl.yview) # type: ignore
         yScrollbar.grid(row=0,column=1,sticky="ns")
         self.textControl.configure(
             xscrollcommand=xScrollbar.set,
@@ -57,14 +56,14 @@ class ErrorWindow(Frame):
         """
         self.textControl.delete(1.0,'end')
 
-    def appendOutputText(self,txt:str)->None:
+    def appendOutputText(self,txt:typing.Optional[str])->None:
         """
         add more text to the window
         """
         if txt is not None:
             self.textControl.insert('end',txt)
 
-    def write(self,txt:str)->None:
+    def write(self,txt:typing.Optional[str])->None:
         """
         same as appendOutputText
 
@@ -84,7 +83,7 @@ class ErrorWindow(Frame):
         get all of the text
         """
         text:typing.Optional[str]=self.textControl.get(1.0,'end')
-        if text is not None:
+        if text is not None: # type: ignore
             return text.strip()
         return ""
 
@@ -126,7 +125,7 @@ class PyErrRun:
         Then, only if there is an error code, it brings up a window with the
             program output.
         """
-        output_log=[]
+        output_log:typing.List[str]=[]
         has_stderr=False
         shared={"has_stderr":False}
         def onErr(txt:str):
@@ -142,7 +141,7 @@ class PyErrRun:
             """
             output_log.append(txt)
         isPythonScript:typing.Union[str,bool]=False
-        if isinstance(cmd,Iterable) and not isinstance(cmd,str):
+        if hasattr(cmd,"__iter__") and not isinstance(cmd,str):
             executables=('python','pythonw','python.exe','pythonw.exe')
             extensions=('py','pyc','pyw')
             cmd=list(cmd)
@@ -152,7 +151,7 @@ class PyErrRun:
                 and cmd[0].rsplit('.',1)[-1] in extensions:
                 isPythonScript=cmd[0]
                 cmd=cmd[1:]
-            cmdStrList=[]
+            cmdStrList:typing.List[str]=[]
             for c in cmd:
                 if c.find(' ')>=0:
                     cmdStrList.append('"'+c+'"')
@@ -194,7 +193,7 @@ class PyErrRun:
         title=f'ERR: {cmdStr}'
         outputStats=(returncode,has_stderr,len(output),output)
         output='[RETURNCODE=%s,HAS_STDERR=%s,OUTPUT_CHARS=%d]\n%s'%outputStats
-        if (returncode is not None and returncode!=0) or has_stderr:
+        if (returncode is not None and returncode!=0) or has_stderr:# type: ignore # noqa: E501
             app=ErrorWindow(title)
             app.setOutputText(output)
             return app.run()

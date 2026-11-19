@@ -13,7 +13,12 @@ class Runner:
 
     RUNNER_TYPE=None
 
-    def __init__(self,name:str,commands:str,*args,**vaArgs):
+    def __init__(self,
+        name:str,
+        commands:str,
+        *args:typing.ParamSpecArgs,
+        **vaArgs:typing.ParamSpecKwargs):
+        """ """
         _=args
         self.name=name
         self.commands=commands
@@ -26,13 +31,16 @@ class RunSomething:
     This is the future.  It is a generic, pluggable way to run things.
     """
 
-    def __init__(self,*args,**vaArgs):
+    def __init__(self,
+        *args:typing.ParamSpecArgs,
+        **vaArgs:typing.ParamSpecKwargs):
+        """ """
         _=args
         for k,v in vaArgs.items():
             self.__dict__[k]=v
 
 
-def cmdline(args:typing.Iterable[str]):
+def cmdline(args:typing.Iterable[str])->int:
     """
     Run the command line
 
@@ -56,8 +64,10 @@ def cmdline(args:typing.Iterable[str]):
         print('  runSomething.py [options]')
         print('Options:')
         print('   NONE')
+        return -1
+    return 0
 
 
 if __name__=='__main__':
     import sys
-    cmdline(sys.argv[1:])
+    sys.exit(cmdline(sys.argv[1:]))

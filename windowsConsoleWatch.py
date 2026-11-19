@@ -95,10 +95,14 @@ def readConsole(pid:int,interval:float=DEFAULT_INTERVAL)->int:
     # a venv launcher can give this process its own console,
     # which blocks AttachConsole
     k.FreeConsole()
-    if not k.AttachConsole(pid):
-        print(f'AttachConsole({pid}) failed, error {ctypes.get_last_error()}',
-            file=sys.stderr)
-        return 1
+    # a detached target creates its console some time after launch,
+    # so keep trying until it exists or the process exits
+    while not k.AttachConsole(pid):
+        if not proc or k.WaitForSingleObject(proc,0)==0:
+            print(f'AttachConsole({pid}) failed, '
+                f'error {ctypes.get_last_error()}',file=sys.stderr)
+            return 1
+        time.sleep(interval)
     con=k.CreateFileW("CONOUT$",GENERIC_RW,SHARE_RW,None,OPEN_EXISTING,0,None)
     prev:typing.Optional[typing.List[str]]=None
     while True:
@@ -321,8 +325,9 @@ class ConsoleWatcher:
             self._helperProcess.terminate()
 
 
-from .osRunJob import OsRunJob
-from .osrun import OsRun
+if typing.TYPE_CHECKING:
+    from .osRunJob import OsRunJob
+    from .osrun import OsRun
 class ConsoleWatcherPlus(ConsoleWatcher):
     """
     Watches everything.
@@ -330,6 +335,10 @@ class ConsoleWatcherPlus(ConsoleWatcher):
     That means it monitors all of the following:
         the program's stdout and stderr streams
         the program's console window output
+
+    NOTE: a program whose stdout is redirected to a pipe writes nothing to
+    its console window.  So the stdout is only redirected (and the console
+    left empty) if a stdout handler is registered with registerStdout().
     """
 
     def __init__(self,
@@ -341,14 +350,16 @@ class ConsoleWatcherPlus(ConsoleWatcher):
         :param pollingInterval: seconds between console polls
         """
         ConsoleWatcher.__init__(self,target,pollingInterval)
-        self.runCommand:typing.Optional[OsRun]=None
-        self.targetJob:typing.Optional[OsRunJob]=None
+        self.runCommand:typing.Optional["OsRun"]=None
+        self.targetJob:typing.Optional["OsRunJob"]=None
 
     def poll(self)->typing.Optional[int]:
         """
         :return: exit code if the process has terminated, None otherwise
         """
-        if self.targetJob is None or self.targetJob.isRunning:
+        if self.targetJob is None:
+            return ConsoleWatcher.poll(self)
+        if self.targetJob.isRunning:
             return None
         result=self.targetJob.result
         return None if result is None else result.returncode
@@ -359,9 +370,9 @@ class ConsoleWatcherPlus(ConsoleWatcher):
 
         :return: exit code of the target process, or None if not launched
         """
-        code=None
-        if self.targetJob is not None:
-            code=self.targetJob.wait().returncode
+        if self.targetJob is None:
+            return ConsoleWatcher.wait(self)
+        code=self.targetJob.wait().returncode
         self.join()
         return code
 
@@ -371,21 +382,23 @@ class ConsoleWatcherPlus(ConsoleWatcher):
 
         :return: pid being watched
         """
-        if isinstance(self.target,int):
-            pid=self.target
-        else:
-            # detached: the target has no console to inherit, so it creates
-            # its own window while OsRun still captures stdout and stderr
-            self.runCommand=OsRun(self.target,detach=True)
-            self.runCommand.addLineNotify(
-                OsRun.STDOUT,self._handleStdoutLine)
-            self.runCommand.addLineNotify(
-                OsRun.STDERR,self._handleStdoutLine)
-            self.targetJob=self.runCommand.runAsync()
-            self.targetProcess=self.targetJob # type: ignore
-            pid=self.targetJob.pid
+        if isinstance(self.target,int) or not self._stdoutLineHandlers:
+            return ConsoleWatcher.start(self)
+        from .osrun import OsRun
+        # detached: the target has no console to inherit, so it creates
+        # its own window while OsRun still captures stdout and stderr
+        self.runCommand=OsRun(self.target,detach=True)
+        self.runCommand.addLineNotify(
+            OsRun.STDOUT,self._handleStdoutLine)
+        self.runCommand.addLineNotify(
+            OsRun.STDERR,self._handleStdoutLine)
+        self.targetJob=self.runCommand.runAsync() # type: ignore
+        self.targetProcess=self.targetJob # type: ignore
+        if self.targetJob is None:
+            raise RuntimeError("Failed to start target job")
+        pid=self.targetJob.pid
         # run as a module because this file has package-relative imports
-        packageParent=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        packageParent=os.path.dirname(os.path.abspath(__file__))
         cmd=[
             sys.executable,
             '-m',__name__,
@@ -460,9 +473,11 @@ def cmdline(args:typing.Sequence[str])->int:
         print(f'   --interval=seconds .......... poll interval, default={DEFAULT_INTERVAL}') # noqa: E501 # pylint: disable=line-too-long
         return -1
     if plus:
-        watcher=ConsoleWatcherPlus(pid if pid is not None else command,interval)
+        watcher=ConsoleWatcherPlus(
+            pid if pid is not None else command,interval)
     else:
-        watcher=ConsoleWatcher(pid if pid is not None else command,interval)
+        watcher=ConsoleWatcher(
+            pid if pid is not None else command,interval)
     if logName:
         log=open(logName,'a',encoding='utf-8')
     else:
