@@ -321,6 +321,89 @@ class ConsoleWatcher:
             self._helperProcess.terminate()
 
 
+from .osRunJob import OsRunJob
+from .osrun import OsRun
+class ConsoleWatcherPlus(ConsoleWatcher):
+    """
+    Watches everything.
+
+    That means it monitors all of the following:
+        the program's stdout and stderr streams
+        the program's console window output
+    """
+
+    def __init__(self,
+        target:typing.Union[int,str,typing.Iterable[str]],
+        pollingInterval:float=DEFAULT_INTERVAL):
+        """
+        :param target: pid of a running process (console only), or a command
+            line to launch with OsRun (stdout, stderr and console)
+        :param pollingInterval: seconds between console polls
+        """
+        ConsoleWatcher.__init__(self,target,pollingInterval)
+        self.runCommand:typing.Optional[OsRun]=None
+        self.targetJob:typing.Optional[OsRunJob]=None
+
+    def poll(self)->typing.Optional[int]:
+        """
+        :return: exit code if the process has terminated, None otherwise
+        """
+        if self.targetJob is None or self.targetJob.isRunning:
+            return None
+        result=self.targetJob.result
+        return None if result is None else result.returncode
+
+    def wait(self)->typing.Optional[int]:
+        """
+        Wait for the target to terminate and all its output to be dispatched
+
+        :return: exit code of the target process, or None if not launched
+        """
+        code=None
+        if self.targetJob is not None:
+            code=self.targetJob.wait().returncode
+        self.join()
+        return code
+
+    def start(self)->int:
+        """
+        Launch the target if needed and start watching it
+
+        :return: pid being watched
+        """
+        if isinstance(self.target,int):
+            pid=self.target
+        else:
+            # detached: the target has no console to inherit, so it creates
+            # its own window while OsRun still captures stdout and stderr
+            self.runCommand=OsRun(self.target,detach=True)
+            self.runCommand.addLineNotify(
+                OsRun.STDOUT,self._handleStdoutLine)
+            self.runCommand.addLineNotify(
+                OsRun.STDERR,self._handleStdoutLine)
+            self.targetJob=self.runCommand.runAsync()
+            self.targetProcess=self.targetJob # type: ignore
+            pid=self.targetJob.pid
+        # run as a module because this file has package-relative imports
+        packageParent=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        cmd=[
+            sys.executable,
+            '-m',__name__,
+            f'--reader={pid}',
+            f'--interval={self.pollingInterval}']
+        self._helperProcess=subprocess.Popen(
+            cmd,stdout=subprocess.PIPE,stdin=subprocess.DEVNULL,
+            cwd=packageParent,
+            creationflags=DETACHED_PROCESS,encoding="utf-8",errors="replace")
+        if self._helperProcess.stdout is not None:
+            thread=threading.Thread(target=self._pump,
+                args=(self._helperProcess.stdout,self._handleLine),
+                daemon=True)
+            thread.start()
+            self._pumpThreads.append(thread)
+        return pid
+
+
 def cmdline(args:typing.Sequence[str])->int:
     """
     Run the command line
@@ -332,6 +415,7 @@ def cmdline(args:typing.Sequence[str])->int:
     readPid:typing.Optional[int]=None
     interval=DEFAULT_INTERVAL
     showAll=False
+    plus=False
     logName=''
     patterns:typing.List[str]=[]
     command:typing.List[str]=[]
@@ -344,6 +428,8 @@ def cmdline(args:typing.Sequence[str])->int:
             av[0]=av[0].lower()
             if av[0] in ['-h','--help']:
                 printhelp=True
+            elif av[0]=='--plus':
+                plus=True
             elif av[0]=='--reader' and len(av)>1:
                 readPid=int(av[1])
             elif av[0]=='--pid' and len(av)>1:
@@ -373,7 +459,10 @@ def cmdline(args:typing.Sequence[str])->int:
         print('   --log=file .................. append every captured line to file') # noqa: E501
         print(f'   --interval=seconds .......... poll interval, default={DEFAULT_INTERVAL}') # noqa: E501 # pylint: disable=line-too-long
         return -1
-    watcher=ConsoleWatcher(pid if pid is not None else command,interval)
+    if plus:
+        watcher=ConsoleWatcherPlus(pid if pid is not None else command,interval)
+    else:
+        watcher=ConsoleWatcher(pid if pid is not None else command,interval)
     if logName:
         log=open(logName,'a',encoding='utf-8')
     else:
